@@ -96,10 +96,10 @@ All ages and interests. From casual puzzle players to educators / teachers and f
     "id":1785, 
     "name":"Square 001", 
     "description":"Standard Square",
-    "hint":"The fox’s tail and ears offer helpful starting clues. Ensure no pieces overlap.",
-    "categories":{ 
+    "hint":"The fox's tail and ears offer helpful starting clues. Ensure no pieces overlap.",
+    "categories":[
         "Shapes" 
-    },
+    ],
     "area":16,
     "scale":1.0, 
     "pieces":[ {
@@ -107,53 +107,57 @@ All ages and interests. From casual puzzle players to educators / teachers and f
         "position":[2.3333e2,2.9933e2],
         "rotation":0,
         "reflected":0,
-        "angles":{45, 45, 90},
+        "angles":[45, 45, 90],
         "area":4
     }, {
         "id":2,
         "position":[300,366],
         "rotation":0,
         "reflected":0,
-        "angles":{45, 45, 90},
+        "angles":[45, 45, 90],
         "area":4
     }, {
         "id":3,
         "position":[300,266],
         "rotation":0,
         "reflected":0,
-        "angles":{45, 45, 90},
+        "angles":[45, 45, 90],
         "area":1
     }, {
         "id":4,
         "position":[3.6667e2,2.3267e2],
         "rotation":0,
         "reflected":0,
-        "angles":{45, 45, 90},
+        "angles":[45, 45, 90],
         "area":2
     }, {
         "id":5,
         "position":[3.8333e2,3.4933e2],
         "rotation":0,
         "reflected":0,
-        "angles":{45, 45, 90},
+        "angles":[45, 45, 90],
         "area":1
     }, {
         "id":6,
         "position":[350,2.9933e2],
         "rotation":0,
         "reflected":0,
-        "angles":{90, 90, 90, 90},
+        "angles":[90, 90, 90, 90],
         "area":2
     }, {
         "id":7,
         "position":[275,2.2433e2],
         "rotation":0,
         "reflected":0,
-        "angles":{45, 135, 45, 135},
+        "angles":[45, 135, 45, 135],
         "area":2
     } ]
 }
 ```
+
+### JSON Puzzles
+
+Within the file "TangramData.json"
 
 ## Scalable packs of puzzle (1000+ puzzles)
 
