@@ -4,11 +4,11 @@
 
 Develop a well-designed and balanced iOS Tangram puzzle game focusing on smooth animations, game state management, and user interaction.
 
-A tangram is an ancient Chinese dissection puzzle consisting of a large square divided into 7 specific geometric pieces called "tans."
-
 ## Game Overview
 
-Players are presented with a silhouette outline and must arrange the 7 classic tangram pieces to fill it exactly. All 7 pieces must be used; pieces may be dragged, rotated, and reflected (flipped).
+A tangram is an ancient Chinese dissection puzzle consisting of a large square divided into 7 specific geometric pieces called "tans."
+
+Players are presented with a silhouette outline of a shape (animal, object, etc.) and must arrange the 7 classic tangram pieces to fill it exactly. All 7 pieces must be used; pieces may be dragged, rotated, and reflected (flipped).
 
 ## Game Pieces
 
@@ -21,52 +21,6 @@ The 7 pieces include:
 * 1 parallelogram
 
 Total area of each puzzle is 16;
-
-```json
-pieces =[
-    {
-        "id":1,
-        "type":"Right isosceles triangle",
-        "size":"Large",
-        "angles":{45, 45, 90},
-        "area":4
-    },{
-        "id":2,
-        "type":"Right isosceles triangle",
-        "size":"Large",
-        "angles":{45, 45, 90},
-        "area":4
-    },{
-        "id":3,
-        "type":"Right isosceles triangle",
-        "size":"Small",
-        "angles":{45, 45, 90},
-        "area":1
-    },{
-        "id":4,
-        "type":"Right isosceles triangle",
-        "size":"Medium",
-        "angles":{45, 45, 90},
-        "area":2
-    },{
-        "id":5,
-        "type":"Right isosceles triangle",
-        "size":"Small",
-        "angles":{45, 45, 90},
-        "area":1
-    },{
-        "id":6,
-        "type":"Square",
-        "size":"Small",
-        "area":2
-    },{
-        "id":7,
-        "type":"Parallelogram",
-        "size":"Small",
-        "area":2
-    }
-]
-```
 
 The two large triangles and two small triangles are congruent pairs, meaning they are identical in size and shape.
 All five triangles are similar, sharing the same 45-45-90 angle measurements, but their sizes differ.
@@ -112,24 +66,24 @@ All ages and interests. From casual puzzle players to educators / teachers and f
 | Property| | Value |
 | --------- | ----- |
 | Id | internal identification number |
-| Name |  English title of puzzle |
-| Description |  English text description of puzzle |
-| Hint |  English text of puzzle hint |
-| Categories |  the different categories the puzzle is a member of |
-| Scale |  scale the puzzle needs to be rendered |
-| Pieces |  list of 7 pieces |
-| Area |  total area of puzzle |
+| Name | English title of puzzle |
+| Description | English text description of puzzle |
+| Hint | English text of puzzle hint |
+| Categories | the different categories the puzzle is a member of |
+| Scale | scale the puzzle needs to be rendered |
+| Pieces | list of 7 pieces |
+| Area | total area of puzzle |
 
 ### Structure of each of the 7 Pieces
 
 | Property| | Value |
 | --------- | ----- |
-| Id |  identification number of the piece (1-7) |
-| Position |  (x,y) position of the center of the piece |
-| Rotation |  degree the piece is rotated |
-| Reflected |  True/False whether the piece is reflected (flipped ) |
-| Angles |  Interior angles of piece |
-| Area |  area of piece |
+| Id | id number of the piece (1-7) |
+| Position | (x,y) center position of the piece |
+| Rotation | degree the piece is rotated |
+| Reflected | True/False whether the piece is reflected (flipped ) |
+| Angles | Interior angles of piece |
+| Area | area of piece |
 
 ### Example puzzle entry
 
