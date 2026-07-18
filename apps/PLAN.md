@@ -8,7 +8,10 @@ A tangram is an ancient Chinese dissection puzzle consisting of a large square d
 
 ## Game Overview
 
-Players are presented with a silhouette outline and must arrange the 7 classic tangram pieces to fill it exactly. All 7 pieces must be used; pieces may be dragged, rotated, and reflected (flipped).
+Players are presented with a silhouette outline of a shape. 
+Players must arrange all 7 tangram pieces to fill the outline exactly. 
+All 7 pieces must be used.
+Pieces may be dragged, rotated, and reflected (flipped).
 
 ## Game Pieces
 
