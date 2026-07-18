@@ -2,13 +2,16 @@
 
 ## Project Overview
 
-Develop a well-designed and balanced iOS Tangram puzzle game focusing on smooth animations, game state management, and user interaction.
+Develop a well-designed and balanced iOS Tangram[^tangram] puzzle game focusing on smooth animations, game state management, and user interaction.
+
+[^tangram]: A tangram is an ancient Chinese dissection puzzle consisting of a large square divided into 7 specific geometric pieces called "tans."
 
 ## Game Overview
 
-A tangram is an ancient Chinese dissection puzzle consisting of a large square divided into 7 specific geometric pieces called "tans."
-
-Players are presented with a silhouette outline of a shape (animal, object, etc.) and must arrange the 7 classic tangram pieces to fill it exactly. All 7 pieces must be used; pieces may be dragged, rotated, and reflected (flipped).
+Players are presented with a silhouette outline of a shape. 
+Players must arrange all 7 tangram pieces to fill the outline exactly. 
+All 7 pieces must be used.
+Pieces may be dragged, rotated, and reflected (flipped).
 
 ## Game Pieces
 
@@ -20,7 +23,7 @@ The 7 pieces include:
 * 1 small square
 * 1 parallelogram
 
-Total area of each puzzle is 16;
+Total area of each puzzle is 16. 
 
 The two large triangles and two small triangles are congruent pairs, meaning they are identical in size and shape.
 All five triangles are similar, sharing the same 45-45-90 angle measurements, but their sizes differ.
