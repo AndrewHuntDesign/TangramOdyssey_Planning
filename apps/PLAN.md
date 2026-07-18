@@ -8,8 +8,10 @@ Develop a well-designed and balanced iOS Tangram[^tangram] puzzle game focusing 
 
 ## Game Overview
 
-Players are presented with a silhouette outline of a shape. 
-Players must arrange all 7 tangram pieces to fill the outline exactly. 
+The player is presented with a silhouette outline of a shape.
+The silhouette can be of an animal, human, letter, geometric shapes, etc.
+
+The objective is to arrange all seven tangram pieces—without overlapping—to fill the outline exactly.
 All 7 pieces must be used.
 Pieces may be dragged, rotated, and reflected (flipped).
 
@@ -25,16 +27,15 @@ The 7 pieces include:
 
 Total area of each puzzle is 16. 
 
-The two large triangles and two small triangles are congruent pairs, meaning they are identical in size and shape.
 All five triangles are similar, sharing the same 45-45-90 angle measurements, but their sizes differ.
+
+The two large triangles and two small triangles are congruent pairs, meaning they are identical in size and shape.
 
 Solving tangram puzzles requires an understanding of rigid motion transformations, including:
 
 * Rotation: Turning a piece.
 * Translation: Sliding a piece.
 * Reflection (flipping): The parallelogram is a key piece for understanding reflection, as it must be reflected (flipped) to create its mirror image.
-
-The objective is to arrange all seven pieces—without overlapping—to form various silhouettes, such as animals, humans, letters, or geometric shapes.
 
 ## Target Audience
 
@@ -66,7 +67,7 @@ All ages and interests. From casual puzzle players to educators / teachers and f
 
 ### Each Puzzle Structure
 
-| Property| | Value |
+| Property | Value |
 | --------- | ----- |
 | Id | internal identification number |
 | Name | English title of puzzle |
@@ -79,7 +80,7 @@ All ages and interests. From casual puzzle players to educators / teachers and f
 
 ### Structure of each of the 7 Pieces
 
-| Property| | Value |
+| Property | Value |
 | --------- | ----- |
 | Id | id number of the piece (1-7) |
 | Position | (x,y) center position of the piece |
@@ -154,12 +155,37 @@ All ages and interests. From casual puzzle players to educators / teachers and f
 }
 ```
 
-## Packs of puzzles
+## Scalable packs of puzzle (1000+ puzzles)
+
+Instead of one JSON per puzzle, a modular system of puzzle packs (categories) can be used.
+
+### Possible structure
+
+```json
+{
+  "packs": [
+    {
+      "id": 1,
+      "name": "Animals",
+      "difficultyRange": [1, 3],
+      "puzzleCount": 6,
+      "puzzles": {1, 3, 5, 6, 7, 8}
+    },
+    {
+      "id": 2,
+      "name": "People",
+      "difficultyRange": [2, 5],
+      "puzzleCount": 7,
+      "puzzles": {2, 4, 9, 10, 11, 12, 13}
+    }
+  ]
+}
+```
 
 ## Categories
 
 ```json
 categories = { 
-    "Alphabet", "Numbers", "Animals", "Birds", "Boats", "Buildings", "Faces", "Fishes", "Human", "Nature", "Objects", "Shapes", "Sports", "Technical", "Toys", "Cats", "Dogs"
+    "Alphabet", "Numbers", "Animals", "Birds", "Boats", "Buildings", "Faces", "Fishes", "People", "Nature", "Objects", "Shapes", "Sports", "Technical", "Toys", "Cats", "Dogs"
 }
 
