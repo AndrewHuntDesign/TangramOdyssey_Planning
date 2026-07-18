@@ -23,53 +23,7 @@ The 7 pieces include:
 * 1 small square
 * 1 parallelogram
 
-Total area of each puzzle is 16;
-
-```json
-pieces =[
-    {
-        "id":1,
-        "type":"Right isosceles triangle",
-        "size":"Large",
-        "angles":{45, 45, 90},
-        "area":4
-    },{
-        "id":2,
-        "type":"Right isosceles triangle",
-        "size":"Large",
-        "angles":{45, 45, 90},
-        "area":4
-    },{
-        "id":3,
-        "type":"Right isosceles triangle",
-        "size":"Small",
-        "angles":{45, 45, 90},
-        "area":1
-    },{
-        "id":4,
-        "type":"Right isosceles triangle",
-        "size":"Medium",
-        "angles":{45, 45, 90},
-        "area":2
-    },{
-        "id":5,
-        "type":"Right isosceles triangle",
-        "size":"Small",
-        "angles":{45, 45, 90},
-        "area":1
-    },{
-        "id":6,
-        "type":"Square",
-        "size":"Small",
-        "area":2
-    },{
-        "id":7,
-        "type":"Parallelogram",
-        "size":"Small",
-        "area":2
-    }
-]
-```
+Total area of each puzzle is 16. 
 
 The two large triangles and two small triangles are congruent pairs, meaning they are identical in size and shape.
 All five triangles are similar, sharing the same 45-45-90 angle measurements, but their sizes differ.
