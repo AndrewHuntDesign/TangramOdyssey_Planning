@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-Develop a well-designed and balanced iOS Tangram puzzle game focusing on smooth animations, game state management, and user interaction.
+Develop a well-designed and balanced iOS Tangram[^tangram] puzzle game focusing on smooth animations, game state management, and user interaction.
 
-A tangram is an ancient Chinese dissection puzzle consisting of a large square divided into 7 specific geometric pieces called "tans."
+[^tangram]: A tangram is an ancient Chinese dissection puzzle consisting of a large square divided into 7 specific geometric pieces called "tans."
 
 ## Game Overview
 
