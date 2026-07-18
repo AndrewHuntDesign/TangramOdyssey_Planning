@@ -69,24 +69,24 @@ All ages and interests. From casual puzzle players to educators / teachers and f
 | Property| | Value |
 | --------- | ----- |
 | Id | internal identification number |
-| Name |  English title of puzzle |
-| Description |  English text description of puzzle |
-| Hint |  English text of puzzle hint |
-| Categories |  the different categories the puzzle is a member of |
-| Scale |  scale the puzzle needs to be rendered |
-| Pieces |  list of 7 pieces |
-| Area |  total area of puzzle |
+| Name | English title of puzzle |
+| Description | English text description of puzzle |
+| Hint | English text of puzzle hint |
+| Categories | the different categories the puzzle is a member of |
+| Scale | scale the puzzle needs to be rendered |
+| Pieces | list of 7 pieces |
+| Area | total area of puzzle |
 
 ### Structure of each of the 7 Pieces
 
 | Property| | Value |
 | --------- | ----- |
-| Id |  identification number of the piece (1-7) |
-| Position |  (x,y) position of the center of the piece |
-| Rotation |  degree the piece is rotated |
-| Reflected |  True/False whether the piece is reflected (flipped ) |
-| Angles |  Interior angles of piece |
-| Area |  area of piece |
+| Id | id number of the piece (1-7) |
+| Position | (x,y) center position of the piece |
+| Rotation | degree the piece is rotated |
+| Reflected | True/False whether the piece is reflected (flipped ) |
+| Angles | Interior angles of piece |
+| Area | area of piece |
 
 ### Example puzzle entry
 
