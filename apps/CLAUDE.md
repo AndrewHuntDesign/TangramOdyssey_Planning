@@ -43,9 +43,12 @@ Note: numeric values use scientific notation (e.g. `2.3333e2`); parse as floats.
 
 When touching data or writing code that consumes it, be aware the spec (PLAN.md) and the shipped data (TangramData.json) do **not** yet agree. Verify against the JSON, and flag mismatches rather than silently assuming the spec:
 
-- **`categories` is empty for all 2,097 puzzles**, even though PLAN.md defines a category taxonomy (Animals, Shapes, Alphabet, etc.) and many puzzle names imply a category. Categorization is unfinished work.
+- **`categories` is populated for all 2,097 puzzles** (e.g. `["Fishes", "Animals"]`) — the taxonomy from PLAN.md is present in the data. (An earlier revision of this doc claimed it was empty; that is no longer true — verified against the JSON.)
 - **`area` is absent** at the puzzle level in the data, though PLAN.md lists it as a puzzle property (it is always 16, and piece `area` values are present).
 - The **puzzle-pack structure** and **difficulty ranges** in PLAN.md do not exist in the data — there is no pack grouping yet.
+- **`angles` is polymorphic**: usually an array of interior-angle degrees, but piece id 5 always serializes as the string `"TriangleSmall2"` (a leaked piece-type name). Decode it as either form.
+- **`rotation` is an integer step 0–23, not degrees** — it maps to 15° increments (24 × 15° = 360°). Multiply by 15 for degrees.
+- Piece `id`→kind is stable across all puzzles: 1,2 = large triangle (area 4); 3,5 = small triangle (area 1); 4 = medium triangle (area 2); 6 = square (area 2); 7 = parallelogram (area 2). Only 6 and 7 ever carry `reflected = 1`.
 
 ## Working in this repo
 

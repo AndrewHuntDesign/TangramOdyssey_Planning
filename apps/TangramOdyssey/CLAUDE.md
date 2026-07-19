@@ -5,17 +5,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 The **Xcode app target** for *Tangram Odyssey*. It was scaffolded from the default Xcode
-SwiftUI template and currently contains only placeholder UI (`ContentView.swift` shows
-"Hello, world!") — none of the game logic, puzzle rendering, or data loading described in the
-spec exists yet. Treat this as a greenfield build-out, not an extension of working code.
+SwiftUI template. The **data and rendering layers are built**; interaction (dragging/rotating
+tans, snap-to-place, win detection) does not exist yet. `ContentView.swift` is a simple
+read-only puzzle browser (prev/next, solution ↔ silhouette toggle).
 
-The product spec, domain model, and puzzle dataset live **one directory up** in `apps/`:
+- `Puzzle.swift` — the Codable model (`Puzzle`, `TanPiece`, `PieceKind`, and the polymorphic
+  `PieceAngles`). Model types are declared `nonisolated` to opt out of the project's default
+  `MainActor` isolation so they can decode off the main actor.
+- `PuzzleLibrary.swift` — `PuzzleLoader.loadAll()` decodes the bundled dataset.
+- `TangramGeometry.swift` — turns pieces into drawable polygons (see **Geometry** below).
+- `PuzzleView.swift` — a `Canvas` renderer (`.solution` colored pieces / `.silhouette` fill).
+- `TangramData.json` — the dataset is **bundled here as an app resource** (copied from
+  `../TangramData.json`; the parent copy remains the source of truth, so keep them in sync).
+- `TangramOdysseyTests/` — Swift Testing coverage: `PuzzleDataTests` (decode + invariants),
+  `TangramGeometryTests` (piece areas, area-preservation, the reference square).
+
+### Geometry (reverse-engineered — do not re-derive)
+
+The dataset ships no geometry description, so `TangramGeometry.swift`'s constants were
+reverse-engineered from puzzle **id 1785 ("Square 001")** — the only all-rotation-0 puzzle,
+whose pieces sit at baseline orientation and tile a perfect square. The conventions, verified
+to tile all 2,097 puzzles with ~0 overlap:
+
+- **1 unit = 50 points** (`pointsPerUnit`), times the puzzle's `scale`. The assembled figure is
+  a 4×4-unit square (area 16).
+- `position` is the piece **centroid**. `rotation` is a **step count**: degrees = `rotation × 15`,
+  applied **counter-clockwise**. `reflected` mirrors **x → −x** before rotating.
+- Canonical polygons are keyed by **piece `id` (1...7), not `PieceKind`** — each id has its own
+  baseline orientation (e.g. the two large triangles, ids 1 and 2, differ by 90°).
+- The dataset's coordinate space is **y-up** (Mathematica origin); `PuzzleView` flips y so
+  figures render upright. Confirmed against the letter and arrow puzzles.
+
+The product spec and canonical dataset live **one directory up** in `apps/`:
 
 - `../PLAN.md` — product/design spec (game concept, rules, platforms, intended data model).
-- `../TangramData.json` — the real dataset: 2,097 puzzles, ~2.9 MB. Not yet bundled as an app
-  resource. See `../CLAUDE.md` for the domain model (7 tans, area 16, reflection mechanic) and
-  the important **spec-vs-data discrepancies** — read that before writing any code that consumes
-  the JSON.
+- `../CLAUDE.md` — the domain model (7 tans, area 16, reflection mechanic) and the important
+  **spec-vs-data discrepancies** — read that before writing code that consumes the JSON.
 
 ## Build, run, test
 
