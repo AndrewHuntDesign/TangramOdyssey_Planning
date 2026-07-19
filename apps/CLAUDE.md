@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-This is a **planning and design repository** for *Tangram Odyssey*, a proposed iOS/macOS/tvOS tangram puzzle game. There is **no application code, build system, or tests here yet** — only a design spec and the puzzle dataset. Do not fabricate build/lint/test commands; there are none until an app target is created.
+This is the **planning, design, and (now) implementation repository** for *Tangram Odyssey*, a proposed iOS/macOS/tvOS tangram puzzle game. It began as design-only; an Xcode app target now exists at [TangramOdyssey/](TangramOdyssey/) — see [TangramOdyssey/CLAUDE.md](TangramOdyssey/CLAUDE.md) for build/run/test commands and app-specific conventions. That target is still a scaffolded template with no game code yet, so this directory remains the source of truth for design and data.
 
-Two files make up the repo:
+Two files make up the design/data side of the repo:
 
 - [PLAN.md](PLAN.md) — the product/design spec: game concept, rules, target platforms, feature list, and the intended data model. This is the source of truth for *intent*.
 - [TangramData.json](TangramData.json) — the actual puzzle dataset (~2,900 KB, 2,097 puzzles). This is the source of truth for *data that exists*.
