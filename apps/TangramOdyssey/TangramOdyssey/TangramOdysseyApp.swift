@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct TangramOdysseyApp: App {
+    @State private var progress = ProgressStore()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(progress)
         }
     }
 }
