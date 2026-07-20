@@ -5,20 +5,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 The **Xcode app target** for *Tangram Odyssey*. It was scaffolded from the default Xcode
-SwiftUI template. The **data and rendering layers are built**; interaction (dragging/rotating
-tans, snap-to-place, win detection) does not exist yet. `ContentView.swift` is a simple
-read-only puzzle browser (prev/next, solution ↔ silhouette toggle).
+SwiftUI template. The **data, rendering, and interactive gameplay layers are built**. Browse by
+**category** (a "packs" list → a thumbnail grid), tap a puzzle to **Play**, then drag / rotate /
+flip the tans from a **tray** to fill the silhouette; correct placements snap+lock (with a
+glide/rotate animation, a lock "pop", and haptics), pieces dropped back over the tray re-home, and
+filling all seven triggers a win. Solved puzzles are **remembered across launches** and surfaced
+throughout the browser (grid thumbnails flip from silhouette to colored solution + checkmark). A
+**hint** menu offers "Show a spot" (highlights where an unplaced piece goes) and "Place a piece".
+Remaining work is polish (difficulty grouping, sound). Note: the dataset's `hint` string is the
+generic "Ensure no pieces overlap." for **all** puzzles, so hints are gameplay assists, not text.
 
 - `Puzzle.swift` — the Codable model (`Puzzle`, `TanPiece`, `PieceKind`, and the polymorphic
   `PieceAngles`). Model types are declared `nonisolated` to opt out of the project's default
   `MainActor` isolation so they can decode off the main actor.
 - `PuzzleLibrary.swift` — `PuzzleLoader.loadAll()` decodes the bundled dataset.
 - `TangramGeometry.swift` — turns pieces into drawable polygons (see **Geometry** below).
-- `PuzzleView.swift` — a `Canvas` renderer (`.solution` colored pieces / `.silhouette` fill).
+- `PuzzleView.swift` — a `Canvas` renderer (`.solution` colored pieces / `.silhouette` fill),
+  used for grid thumbnails and previews.
+- `PuzzleCatalog.swift` — groups puzzles by category (puzzles can be in several; categories are
+  overlapping, e.g. Fishes ⊂ Animals). `ContentView` → `CategoryListView` (packs, with per-pack
+  solved/total) → `CategoryPuzzlesView` (thumbnail grid) → `GameBoardView`. Navigation uses
+  typed values (`CategoryRef`, `Puzzle`) via `navigationDestination`.
+- `GameModel.swift` — `@Observable @MainActor TangramGame`: slots (targets), player pieces,
+  drag/rotate/flip, and snapping. Snapping matches a piece's polygon against unfilled slots by
+  **congruent-polygon comparison** (centroid + vertex sets), which makes same-kind pieces
+  interchangeable and handles piece symmetry without tracking orientation. Same-kind pieces share
+  one base polygon; per-id baseline differences (ids 2 and 5) fold into slot angles.
+- `ProgressStore.swift` — `@Observable @MainActor` store of solved puzzle ids, persisted to
+  `UserDefaults` (injectable for tests). Created in `TangramOdysseyApp` and passed via
+  `.environment`; the game calls `markSolved(puzzle.id)` on win and the browser reads it.
+- `GameBoardView.swift` — the interactive board. Pieces are **per-piece positioned views**
+  (`PieceShape` in a centered frame + `.position`/`.rotationEffect(-angle)`/`.scaleEffect`) so
+  SwiftUI animates glide, rotation, flip, and lock-pop; the silhouette is a `Canvas` layer; hit
+  testing uses each piece's `contentShape`. `debugSolved:`/`placeAllAtSolution()` place every
+  piece at its solution pose — handy for regression-checking the geometry against the silhouette.
 - `TangramData.json` — the dataset is **bundled here as an app resource** (copied from
   `../TangramData.json`; the parent copy remains the source of truth, so keep them in sync).
 - `TangramOdysseyTests/` — Swift Testing coverage: `PuzzleDataTests` (decode + invariants),
-  `TangramGeometryTests` (piece areas, area-preservation, the reference square).
+  `TangramGeometryTests` (piece areas, area-preservation, the reference square), and
+  `ProgressStoreTests` (solved tracking + persistence, using an isolated `UserDefaults` suite).
+- `TangramOdysseyUITests/GameplayUITests.swift` — XCUITest flow: browse category → open puzzle →
+  solve by tapping "Place a piece" ×7 → assert the win overlay. Relies on the accessibility
+  identifiers `category-<name>`, `puzzle-<id>`, and `hintMenu`. (Dragging tans by coordinate is
+  brittle, so the win path is driven through the hint menu instead.)
 
 ### Geometry (reverse-engineered — do not re-derive)
 
@@ -55,6 +84,25 @@ Prefer the `xcode-tools` MCP tools over the command line (the user is driving fr
 Three targets exist: `TangramOdyssey` (app), `TangramOdysseyTests` (Swift Testing), and
 `TangramOdysseyUITests` (XCUITest). Unit tests use the **Swift Testing** framework
 (`import Testing`, `@Test`, `#expect`) — not XCTest. UI tests use XCTest/`XCUIApplication`.
+
+### Command-line fallback (when the MCP test runner can't boot a simulator)
+
+In some headless environments the MCP `RunAllTests`/`RunSomeTests` calls return "Test execution
+was cancelled". A `Makefile` wraps the working `xcodebuild` invocations (run from this directory):
+
+- `make test` — all unit + UI tests on an `iPhone 17, OS=latest` simulator. Result bundle at
+  `/tmp/TangramTests.xcresult`.
+- `make build` — simulator build.
+- `make build-device` — compiles for real device hardware (`generic/platform=iOS`, Release,
+  `CODE_SIGNING_ALLOWED=NO`). A signed install additionally needs a connected device and a
+  provisioning profile (a `DEVELOPMENT_TEAM` is already set; signing is Automatic).
+- `make ci` — runs `Scripts/ci.sh` (dependency-free full test run, `CODE_SIGNING_ALLOWED=NO`).
+  This is what CI uses: `.github/workflows/ci.yml` (repo root) runs it on push/PR — the runner
+  image must provide **Xcode 26 + an iOS 26 simulator**.
+
+The suite is 15 tests (13 unit across `PuzzleDataTests`/`TangramGeometryTests`/`ProgressStoreTests`
++ 2 in `GameplayUITests`); no template stubs remain. The simulator destination pins `OS=latest`
+so it satisfies the iOS 26.5 deployment target.
 
 ## Project conventions specific to this setup
 

@@ -6,72 +6,57 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var puzzles: [Puzzle] = []
-    @State private var index = 0
-    @State private var showSolution = true
+    @Environment(ProgressStore.self) private var progress
+    @State private var catalog: PuzzleCatalog?
     @State private var loadError: String?
 
-    private var current: Puzzle? {
-        puzzles.indices.contains(index) ? puzzles[index] : nil
-    }
-
     var body: some View {
-        VStack(spacing: 16) {
-            if let error = loadError {
-                ContentUnavailableView("Couldn't load puzzles", systemImage: "exclamationmark.triangle", description: Text(error))
-            } else if let puzzle = current {
-                header(for: puzzle)
-
-                PuzzleView(puzzle: puzzle,
-                           style: showSolution ? .solution : .silhouette(.primary))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.quaternary, in: .rect(cornerRadius: 20))
-
-                controls
-            } else {
-                ProgressView()
+        NavigationStack {
+            Group {
+                if let error = loadError {
+                    ContentUnavailableView("Couldn't load puzzles",
+                                           systemImage: "exclamationmark.triangle",
+                                           description: Text(error))
+                } else if let catalog {
+                    CategoryListView(catalog: catalog)
+                } else {
+                    ProgressView()
+                }
+            }
+            .navigationTitle("Tangram Odyssey")
+            .toolbar {
+                if let catalog {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Label("\(progress.solvedCount) / \(catalog.all.count)", systemImage: "checkmark.seal.fill")
+                            .labelStyle(.titleAndIcon)
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(.green)
+                    }
+                }
+            }
+            .navigationDestination(for: CategoryRef.self) { ref in
+                if let catalog {
+                    CategoryPuzzlesView(category: ref.name, puzzles: catalog.puzzles(in: ref.name))
+                }
+            }
+            .navigationDestination(for: Puzzle.self) { puzzle in
+                GameBoardView(puzzle: puzzle)
             }
         }
-        .padding()
         .task {
-            do { puzzles = try PuzzleLoader.loadAll() }
+            do { catalog = PuzzleCatalog(try PuzzleLoader.loadAll()) }
             catch { loadError = String(describing: error) }
         }
-    }
-
-    private func header(for puzzle: Puzzle) -> some View {
-        VStack(spacing: 4) {
-            Text(puzzle.name).font(.title2.bold())
-            Text(puzzle.categories.joined(separator: " · "))
-                .font(.subheadline).foregroundStyle(.secondary)
-        }
-    }
-
-    private var controls: some View {
-        VStack(spacing: 12) {
-            Toggle("Show solution", isOn: $showSolution)
-                .toggleStyle(.button)
-
-            HStack {
-                Button { step(-1) } label: { Image(systemName: "chevron.left") }
-                    .disabled(index == 0)
-                Spacer()
-                Text("\(index + 1) of \(puzzles.count)")
-                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-                Spacer()
-                Button { step(1) } label: { Image(systemName: "chevron.right") }
-                    .disabled(index >= puzzles.count - 1)
-            }
-            .font(.title2)
-            .buttonStyle(.bordered)
-        }
-    }
-
-    private func step(_ delta: Int) {
-        index = min(max(0, index + delta), puzzles.count - 1)
     }
 }
 
 #Preview {
     ContentView()
+        .environment(ProgressStore())
+}
+
+#Preview("With progress") {
+    let store = ProgressStore(defaults: UserDefaults(suiteName: "preview")!)
+    store.markSolved(1)
+    return ContentView().environment(store)
 }

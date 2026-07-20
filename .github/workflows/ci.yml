@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    # Requires a runner image with Xcode 26 + an iOS 26 simulator (the app's deployment
+    # target is iOS 26.5). Adjust the image / Xcode path as GitHub's images evolve.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          if [ -d /Applications/Xcode_26.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.app
+          fi
+          xcodebuild -version
+
+      - name: Build & test
+        working-directory: apps/TangramOdyssey
+        run: ./Scripts/ci.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcresult
+          path: apps/TangramOdyssey/build/TangramTests.xcresult
