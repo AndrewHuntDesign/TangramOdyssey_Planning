@@ -37,10 +37,11 @@ struct PuzzleView: View {
             let offsetX = (size.width - drawnWidth) / 2
             let offsetY = (size.height - drawnHeight) / 2
 
-            // Map a puzzle-space point into the fitted, vertically-flipped canvas rect.
+            // Map a puzzle-space point into the fitted canvas rect. The dataset's y axis already
+            // matches screen orientation (y-down), so no vertical flip is applied.
             func map(_ point: CGPoint) -> CGPoint {
                 CGPoint(x: offsetX + (point.x - box.minX) * scale,
-                        y: offsetY + (box.maxY - point.y) * scale)
+                        y: offsetY + (point.y - box.minY) * scale)
             }
 
             func path(for vertices: [CGPoint]) -> Path {
@@ -80,8 +81,8 @@ struct PuzzleView: View {
     }
 }
 
-#Preview("3 Fishes – silhouette") {
-    if let puzzle = try? PuzzleLoader.loadAll().first {
+#Preview("Letter – orientation") {
+    if let puzzle = try? PuzzleLoader.loadAll().first(where: { $0.id == 1300 }) {
         PuzzleView(puzzle: puzzle, style: .silhouette(.black))
             .frame(width: 300, height: 300)
             .padding()

@@ -18,8 +18,9 @@ private struct BoardMap {
     private var originY: CGFloat { (size.height - board.height * scale) / 2 }
 
     func toScreen(_ p: CGPoint) -> CGPoint {
+        // Board space is screen-oriented (y-down); no vertical flip.
         CGPoint(x: originX + (p.x - board.minX) * scale,
-                y: originY + (board.maxY - p.y) * scale) // flip y
+                y: originY + (p.y - board.minY) * scale)
     }
 }
 
@@ -40,7 +41,7 @@ private struct PolyShape: Shape {
 /// A single tan drawn in its own local, centered frame. Orientation, reflection, and position
 /// are applied by view modifiers (so they animate); the path itself is the static base shape.
 private struct PieceShape: Shape {
-    /// Base unit polygon, centered on the centroid (dataset y-up units).
+    /// Base unit polygon, centered on the centroid (board units, screen-oriented y-down).
     var base: [CGPoint]
     /// Points per board unit × render scale.
     var pointScale: CGFloat
@@ -50,7 +51,7 @@ private struct PieceShape: Shape {
         let center = CGPoint(x: rect.midX, y: rect.midY)
         let points = base.map { v in
             CGPoint(x: center.x + v.x * pointScale,
-                    y: center.y - v.y * pointScale) // local frame is y-down
+                    y: center.y + v.y * pointScale)
         }
         if let first = points.first {
             path.move(to: first)
@@ -139,7 +140,7 @@ struct GameBoardView: View {
     private func trayBackground(map: BoardMap) -> some View {
         let board = model.boardRect
         let topLeft = map.toScreen(CGPoint(x: board.minX, y: model.trayTopY))
-        let bottomRight = map.toScreen(CGPoint(x: board.maxX, y: board.minY))
+        let bottomRight = map.toScreen(CGPoint(x: board.maxX, y: board.maxY))
         let rect = CGRect(x: topLeft.x, y: topLeft.y,
                           width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y)
         return RoundedRectangle(cornerRadius: 16)
@@ -193,7 +194,7 @@ struct GameBoardView: View {
             .contentShape(shape)
             .frame(width: side, height: side)
             .scaleEffect(x: piece.reflected ? -1 : 1, y: 1)          // reflect (inside rotation)
-            .rotationEffect(.degrees(-piece.angleDegrees))           // board CCW → screen CW
+            .rotationEffect(.degrees(piece.angleDegrees))            // y-down board: apply angle directly
             .scaleEffect(popID == piece.id ? 1.14 : 1)               // lock pop, around centroid
             .position(map.toScreen(piece.centroid))
             .zIndex(selected ? 2 : (piece.locked ? 0 : 1))
