@@ -38,7 +38,7 @@ struct CategoryPuzzlesView: View {
             PuzzleView(puzzle: puzzle,
                        style: solved ? .solution : .silhouette(.primary),
                        padding: 8)
-                .frame(height: 96)
+                .aspectRatio(1, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .background(.quaternary, in: .rect(cornerRadius: 12))
                 .overlay(alignment: .topTrailing) {
@@ -50,8 +50,9 @@ struct CategoryPuzzlesView: View {
                 }
 
             Text(puzzle.name)
-                .font(.caption2)
-                .lineLimit(1)
+                .font(.caption)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
                 .foregroundStyle(.secondary)
         }
     }

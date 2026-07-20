@@ -92,4 +92,14 @@ extension PieceKind {
         case .parallelogram:  Color(red: 0.60, green: 0.45, blue: 0.80)
         }
     }
+
+    var accessibilityName: String {
+        switch self {
+        case .largeTriangle: "Large triangle"
+        case .mediumTriangle: "Medium triangle"
+        case .smallTriangle: "Small triangle"
+        case .square: "Square"
+        case .parallelogram: "Parallelogram"
+        }
+    }
 }

@@ -67,6 +67,7 @@ struct GameBoardView: View {
     @State private var popID: Int?
     @State private var hintedSlotID: Int?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ProgressStore.self) private var progress
     private var debugSolved = false
 
@@ -99,7 +100,7 @@ struct GameBoardView: View {
                 .disabled(model.isSolved)
 
                 Button("Reset", systemImage: "arrow.counterclockwise") {
-                    withAnimation(.snappy) { model.reset() }
+                    withOptionalAnimation(.snappy) { model.reset() }
                 }
             }
         }
@@ -130,7 +131,7 @@ struct GameBoardView: View {
         .task(id: hintedSlotID) {
             guard hintedSlotID != nil else { return }
             try? await Task.sleep(for: .seconds(2.5))
-            withAnimation(.easeInOut) { hintedSlotID = nil }
+            withOptionalAnimation(.easeInOut) { hintedSlotID = nil }
         }
         .overlay { if model.isSolved { winOverlay } }
     }
@@ -209,13 +210,20 @@ struct GameBoardView: View {
                         if snapped { pop(piece.id) }
                     }
             )
+            .accessibilityLabel("\(piece.kind.accessibilityName) piece")
+            .accessibilityValue(piece.locked ? "Placed" : "Unplaced")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(named: "Select") {
+                guard !piece.locked, !model.isSolved else { return }
+                model.selectedID = piece.id
+            }
     }
 
     private var controls: some View {
         HStack(spacing: 20) {
-            Button { rotate(-45) } label: { Image(systemName: "rotate.left") }
-            Button { rotate(45) } label: { Image(systemName: "rotate.right") }
-            Button { flip() } label: { Image(systemName: "trapezoid.and.line.vertical") }
+            Button("Rotate left", systemImage: "rotate.left") { rotate(-45) }
+            Button("Rotate right", systemImage: "rotate.right") { rotate(45) }
+            Button("Flip", systemImage: "trapezoid.and.line.vertical") { flip() }
         }
         .font(.title)
         .buttonStyle(.bordered)
@@ -229,32 +237,36 @@ struct GameBoardView: View {
 
     private func rotate(_ delta: Double) {
         let id = model.selectedID
-        let snapped = withAnimation(.bouncy) { model.rotateSelected(byDegrees: delta) }
+        let snapped = withOptionalAnimation(.bouncy) { model.rotateSelected(byDegrees: delta) }
         if snapped, let id { pop(id) }
     }
 
     private func flip() {
         let id = model.selectedID
-        let snapped = withAnimation(.bouncy) { model.flipSelected() }
+        let snapped = withOptionalAnimation(.bouncy) { model.flipSelected() }
         if snapped, let id { pop(id) }
     }
 
     private func placeHint() {
-        let id = withAnimation(.bouncy) { model.placeHint() }
+        let id = withOptionalAnimation(.bouncy) { model.placeHint() }
         if let id { pop(id) }
     }
 
     private func showSpot() {
         guard let id = model.unfilledSlotIDs.first else { return }
-        withAnimation(.easeInOut) { hintedSlotID = id }
+        withOptionalAnimation(.easeInOut) { hintedSlotID = id }
     }
 
     private func pop(_ id: Int) {
         #if canImport(UIKit)
         UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         #endif
-        withAnimation(.bouncy(duration: 0.25)) { popID = id }
-        withAnimation(.easeOut(duration: 0.2).delay(0.22)) { popID = nil }
+        withOptionalAnimation(.bouncy(duration: 0.25)) { popID = id }
+        withOptionalAnimation(.easeOut(duration: 0.2).delay(0.22)) { popID = nil }
+    }
+
+    private func withOptionalAnimation<Result>(_ animation: Animation, _ body: () throws -> Result) rethrows -> Result {
+        try withAnimation(reduceMotion ? nil : animation, body)
     }
 
     private var winOverlay: some View {
@@ -263,7 +275,7 @@ struct GameBoardView: View {
                 .font(.system(size: 64)).foregroundStyle(.green)
             Text("Solved!").font(.largeTitle.bold())
             HStack {
-                Button("Play again") { withAnimation(.snappy) { model.reset() } }
+                Button("Play again") { withOptionalAnimation(.snappy) { model.reset() } }
                     .buttonStyle(.bordered)
                 Button("Done") { dismiss() }
                     .buttonStyle(.borderedProminent)

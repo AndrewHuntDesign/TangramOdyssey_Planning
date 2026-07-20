@@ -7,6 +7,55 @@
 
 import SwiftUI
 
+private struct PuzzlePieceGeometry {
+    let piece: TanPiece
+    let vertices: [CGPoint]
+}
+
+private struct PuzzleRenderGeometry {
+    let polygons: [PuzzlePieceGeometry]
+    let boundingBox: CGRect
+
+    init(puzzle: Puzzle) {
+        polygons = puzzle.pieces.map {
+            PuzzlePieceGeometry(piece: $0, vertices: $0.vertices(scale: puzzle.scale))
+        }
+
+        let points = polygons.flatMap(\.vertices)
+        guard let first = points.first else {
+            boundingBox = .zero
+            return
+        }
+
+        var minX = first.x
+        var minY = first.y
+        var maxX = first.x
+        var maxY = first.y
+        for point in points {
+            minX = min(minX, point.x)
+            minY = min(minY, point.y)
+            maxX = max(maxX, point.x)
+            maxY = max(maxY, point.y)
+        }
+        boundingBox = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+}
+
+@MainActor
+private enum PuzzleGeometryCache {
+    private static var geometries: [Int: PuzzleRenderGeometry] = [:]
+
+    static func geometry(for puzzle: Puzzle) -> PuzzleRenderGeometry {
+        if let geometry = geometries[puzzle.id] {
+            return geometry
+        }
+
+        let geometry = PuzzleRenderGeometry(puzzle: puzzle)
+        geometries[puzzle.id] = geometry
+        return geometry
+    }
+}
+
 /// How a puzzle is drawn.
 enum PuzzleRenderStyle {
     /// Each tan filled with its kind's color and outlined — the solved puzzle.
@@ -25,9 +74,11 @@ struct PuzzleView: View {
     var padding: CGFloat = 16
 
     var body: some View {
+        let geometry = PuzzleGeometryCache.geometry(for: puzzle)
+
         Canvas { context, size in
-            let polygons = puzzle.piecePolygons()
-            let box = puzzle.boundingBox
+            let polygons = geometry.polygons
+            let box = geometry.boundingBox
             guard box.width > 0, box.height > 0 else { return }
 
             let scale = min((size.width - 2 * padding) / box.width,
@@ -57,14 +108,14 @@ struct PuzzleView: View {
 
             switch style {
             case .solution:
-                for (piece, vertices) in polygons {
-                    let shape = path(for: vertices)
-                    context.fill(shape, with: .color(piece.kind?.color ?? .gray))
+                for polygon in polygons {
+                    let shape = path(for: polygon.vertices)
+                    context.fill(shape, with: .color(polygon.piece.kind?.color ?? .gray))
                     context.stroke(shape, with: .color(.black.opacity(0.4)), lineWidth: 1)
                 }
             case .silhouette(let color):
-                for (_, vertices) in polygons {
-                    context.fill(path(for: vertices), with: .color(color))
+                for polygon in polygons {
+                    context.fill(path(for: polygon.vertices), with: .color(color))
                 }
             }
         }

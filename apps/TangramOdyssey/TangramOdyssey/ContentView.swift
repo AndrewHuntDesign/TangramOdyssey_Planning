@@ -44,8 +44,14 @@ struct ContentView: View {
             }
         }
         .task {
-            do { catalog = PuzzleCatalog(try PuzzleLoader.loadAll()) }
-            catch { loadError = String(describing: error) }
+            do {
+                let puzzles = try await Task.detached {
+                    try PuzzleLoader.loadAll()
+                }.value
+                catalog = PuzzleCatalog(puzzles)
+            } catch {
+                loadError = String(describing: error)
+            }
         }
     }
 }
