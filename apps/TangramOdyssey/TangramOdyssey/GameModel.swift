@@ -75,25 +75,26 @@ final class TangramGame {
         }
         self.slots = builtSlots
 
-        // Tray home positions below the silhouette. Board space is screen-oriented (y-down),
-        // so "below" is a larger y. Two compact rows keep the board's virtual bounds tight,
-        // making the target silhouette occupy most of the available screen width.
-        let dx = m * 0.32
-        let dy = m * 0.34
-        let trayGap = m * 0.18
-        let pieceHalf = m * 0.30
+        // Tray home positions below the silhouette. Two compact rows keep the tray short while
+        // leaving enough inset for the smaller tray-rendered pieces to stay fully inside.
+        let dx = m * 0.27
+        let dy = m * 0.28
+        let trayGap = m * 0.30
+        let pieceHalf = m * 0.20
         let horizontalMargin = m * 0.22
-        let verticalMargin = m * 0.10
+        let verticalMargin = m * 0.05
+        let trayTopInset = m * 0.10
+        let trayBottomPadding = m * 0.02
         func rowY(_ r: Int) -> CGFloat { box.maxY + trayGap + CGFloat(r) * dy }
         var homes: [CGPoint] = []
         for i in 0..<4 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1.5) * dx, y: rowY(0))) }
         for i in 0..<3 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1) * dx, y: rowY(1))) }
 
-        self.trayTopY = box.maxY + verticalMargin
+        self.trayTopY = box.maxY + trayTopInset
         self.boardRect = CGRect(x: box.minX - horizontalMargin,
                                 y: box.minY - verticalMargin,
                                 width: box.width + 2 * horizontalMargin,
-                                height: (rowY(1) + pieceHalf + verticalMargin) - (box.minY - verticalMargin))
+                                height: (rowY(1) + pieceHalf + trayBottomPadding) - (box.minY - verticalMargin))
 
         self.pieces = builtSlots.enumerated().map { index, slot in
             let home = homes[index]

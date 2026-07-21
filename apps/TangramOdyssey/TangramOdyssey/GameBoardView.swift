@@ -246,7 +246,7 @@ struct GameBoardView: View {
 
     private func pieceRenderScale(_ piece: PlayPiece) -> CGFloat {
         // Tray pieces render smaller so the enlarged silhouette remains the visual focus.
-        piece.locked || piece.centroid.y <= model.trayTopY ? 1 : 0.58
+        piece.locked || piece.centroid.y <= model.trayTopY ? 1 : 0.44
     }
 
     private func pieceRadius(_ piece: PlayPiece, pointScale: CGFloat, renderScale: CGFloat) -> CGFloat {
