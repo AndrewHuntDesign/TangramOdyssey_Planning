@@ -184,6 +184,15 @@ final class TangramGame {
         return trySnap(id)
     }
 
+    /// Sets a piece's absolute angle; wheel drags defer snapping until the gesture ends.
+    @discardableResult
+    func rotatePiece(_ id: Int, toDegrees angle: Double, shouldSnap: Bool = true) -> Bool {
+        guard let index = pieces.firstIndex(where: { $0.id == id }), !pieces[index].locked else { return false }
+        selectedID = id
+        pieces[index].angleDegrees = angle
+        return shouldSnap ? trySnap(id) : false
+    }
+
     @discardableResult
     func flipSelected() -> Bool {
         guard let id = selectedID, let index = pieces.firstIndex(where: { $0.id == id }), !pieces[index].locked else { return false }

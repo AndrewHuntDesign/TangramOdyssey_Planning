@@ -66,6 +66,7 @@ struct GameBoardView: View {
     @State private var model: TangramGame
     @State private var popID: Int?
     @State private var hintedSlotID: Int?
+    @State private var showsPieceLines = true // Controls only the silhouette's internal guides.
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ProgressStore.self) private var progress
@@ -92,6 +93,8 @@ struct GameBoardView: View {
                 Menu {
                     Button("Show a spot", systemImage: "eye") { showSpot() }
                     Button("Place a piece", systemImage: "wand.and.stars") { placeHint() }
+                    Divider()
+                    Toggle("Piece lines", systemImage: "square.grid.3x3", isOn: $showsPieceLines)
                 } label: {
                     Image(systemName: "lightbulb")
                 }
@@ -113,11 +116,12 @@ struct GameBoardView: View {
 
             ZStack {
                 trayBackground(map: map)
-                silhouette(map: map)
+                silhouette(map: map, showsPieceLines: showsPieceLines)
                 hintHighlight(map: map)
                 ForEach(model.pieces) { piece in
                     pieceView(piece, map: map, pointScale: pointScale)
                 }
+                rotationWheel(map: map, pointScale: pointScale)
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
@@ -163,7 +167,7 @@ struct GameBoardView: View {
         }
     }
 
-    private func silhouette(map: BoardMap) -> some View {
+    private func silhouette(map: BoardMap, showsPieceLines: Bool) -> some View {
         Canvas { context, _ in
             for slot in model.slots {
                 var path = Path()
@@ -174,8 +178,10 @@ struct GameBoardView: View {
                     path.closeSubpath()
                 }
                 context.fill(path, with: .color(.secondary.opacity(0.15)))
-                context.stroke(path, with: .color(.secondary.opacity(0.4)),
-                               style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                if showsPieceLines {
+                    context.stroke(path, with: .color(.secondary.opacity(0.4)),
+                                   style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                }
             }
         }
         .allowsHitTesting(false)
@@ -206,7 +212,7 @@ struct GameBoardView: View {
                         model.drag(piece.id, screenTranslation: value.translation, scale: map.scale)
                     }
                     .onEnded { _ in
-                        let snapped = withAnimation(.bouncy) { model.endDrag(piece.id) }
+                        let snapped = withOptionalAnimation(.bouncy) { model.endDrag(piece.id) }
                         if snapped { pop(piece.id) }
                     }
             )
@@ -217,6 +223,34 @@ struct GameBoardView: View {
                 guard !piece.locked, !model.isSolved else { return }
                 model.selectedID = piece.id
             }
+    }
+
+    @ViewBuilder
+    private func rotationWheel(map: BoardMap, pointScale: CGFloat) -> some View {
+        if let piece = model.selectedPiece, !piece.locked, !model.isSolved {
+            let radius = pieceRadius(piece, pointScale: pointScale)
+            let wheelRadius = max(radius + 34, 52)
+            let handleSize: CGFloat = 32
+            let diameter = (wheelRadius + handleSize) * 2
+
+            RotationWheelView(angleDegrees: piece.angleDegrees,
+                              wheelRadius: wheelRadius,
+                              handleSize: handleSize) { angle, isFinished in
+                let snapped = model.rotatePiece(piece.id, toDegrees: angle, shouldSnap: isFinished)
+                if snapped { pop(piece.id) }
+            }
+            .frame(width: diameter, height: diameter)
+            .position(map.toScreen(piece.centroid))
+            .zIndex(3)
+            .transition(.opacity)
+        }
+    }
+
+    private func pieceRadius(_ piece: PlayPiece, pointScale: CGFloat) -> CGFloat {
+        let baseRadius = TangramGame.baseUnitPolygon(piece.kind)
+            .map { hypot($0.x, $0.y) }
+            .max() ?? 2
+        return baseRadius * pointScale
     }
 
     private var controls: some View {
@@ -284,6 +318,94 @@ struct GameBoardView: View {
         .padding(32)
         .background(.regularMaterial, in: .rect(cornerRadius: 24))
         .transition(.scale.combined(with: .opacity))
+    }
+}
+
+private struct RotationWheelView: View {
+    let angleDegrees: Double
+    let wheelRadius: CGFloat
+    let handleSize: CGFloat
+    let onRotate: (Double, Bool) -> Void
+
+    var body: some View {
+        GeometryReader { proxy in
+            let center = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
+            let handleCenter = handleCenter(center: center)
+
+            ZStack {
+                Circle()
+                    .stroke(.primary.opacity(0.35), style: StrokeStyle(lineWidth: 2, dash: [7, 6]))
+                    .frame(width: wheelRadius * 2, height: wheelRadius * 2)
+                    .position(center)
+
+                Circle()
+                    .fill(.background)
+                    .frame(width: handleSize, height: handleSize)
+                    .overlay {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    }
+                    .overlay(Circle().stroke(.primary.opacity(0.5), lineWidth: 1))
+                    .shadow(radius: 2)
+                    .position(handleCenter)
+            }
+            .contentShape(RotationWheelHitShape(innerRadius: wheelRadius - handleSize,
+                                                outerRadius: wheelRadius + handleSize),
+                          eoFill: true)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        onRotate(angle(from: value.location, center: center), false)
+                    }
+                    .onEnded { value in
+                        onRotate(angle(from: value.location, center: center), true)
+                    }
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Rotation wheel")
+            .accessibilityValue("\(Int(angleDegrees.rounded())) degrees")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment:
+                    onRotate(angleDegrees + 5, true)
+                case .decrement:
+                    onRotate(angleDegrees - 5, true)
+                @unknown default:
+                    break
+                }
+            }
+        }
+    }
+
+    private func handleCenter(center: CGPoint) -> CGPoint {
+        let radians = angleDegrees * .pi / 180
+        return CGPoint(x: center.x + cos(radians) * wheelRadius,
+                       y: center.y + sin(radians) * wheelRadius)
+    }
+
+    private func angle(from location: CGPoint, center: CGPoint) -> Double {
+        atan2(location.y - center.y, location.x - center.x) * 180 / .pi
+    }
+}
+
+private struct RotationWheelHitShape: Shape {
+    let innerRadius: CGFloat
+    let outerRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        // The even-odd ring leaves the piece center open so center drags keep moving the tan.
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        var path = Path()
+        path.addEllipse(in: CGRect(x: center.x - outerRadius,
+                                   y: center.y - outerRadius,
+                                   width: outerRadius * 2,
+                                   height: outerRadius * 2))
+        path.addEllipse(in: CGRect(x: center.x - innerRadius,
+                                   y: center.y - innerRadius,
+                                   width: innerRadius * 2,
+                                   height: innerRadius * 2))
+        return path
     }
 }
 
