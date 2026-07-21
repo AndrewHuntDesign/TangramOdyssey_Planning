@@ -71,9 +71,11 @@ struct GameBoardView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ProgressStore.self) private var progress
     private var debugSolved = false
+    private var onDone: (() -> Void)?
 
-    init(puzzle: Puzzle) {
+    init(puzzle: Puzzle, onDone: (() -> Void)? = nil) {
         _model = State(initialValue: TangramGame(puzzle: puzzle))
+        self.onDone = onDone
     }
 
     init(puzzle: Puzzle, debugSolved: Bool) {
@@ -288,13 +290,21 @@ struct GameBoardView: View {
             HStack {
                 Button("Play again") { withOptionalAnimation(.snappy) { model.reset() } }
                     .buttonStyle(.bordered)
-                Button("Done") { dismiss() }
+                Button("Done") { finishPuzzle() }
                     .buttonStyle(.borderedProminent)
             }
         }
         .padding(32)
         .background(.regularMaterial, in: .rect(cornerRadius: 24))
         .transition(.scale.combined(with: .opacity))
+    }
+
+    private func finishPuzzle() {
+        if let onDone {
+            onDone()
+        } else {
+            dismiss()
+        }
     }
 }
 
