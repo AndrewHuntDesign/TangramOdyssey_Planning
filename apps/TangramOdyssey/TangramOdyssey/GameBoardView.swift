@@ -82,10 +82,7 @@ struct GameBoardView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            board
-            controls
-        }
+        board
         .navigationTitle(model.puzzle.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -190,9 +187,10 @@ struct GameBoardView: View {
     private func pieceView(_ piece: PlayPiece, map: BoardMap, pointScale: CGFloat) -> some View {
         let selected = model.selectedID == piece.id
         let base = TangramGame.baseUnitPolygon(piece.kind)
-        let radius = (base.map { hypot($0.x, $0.y) }.max() ?? 2) * pointScale
+        let renderScale = pieceRenderScale(piece)
+        let radius = (base.map { hypot($0.x, $0.y) }.max() ?? 2) * pointScale * renderScale
         let side = radius * 2 + 8
-        let shape = PieceShape(base: base, pointScale: pointScale)
+        let shape = PieceShape(base: base, pointScale: pointScale * renderScale)
 
         return shape
             .fill(piece.kind.color.opacity(piece.locked ? 1 : 0.9))
@@ -228,9 +226,9 @@ struct GameBoardView: View {
     @ViewBuilder
     private func rotationWheel(map: BoardMap, pointScale: CGFloat) -> some View {
         if let piece = model.selectedPiece, !piece.locked, !model.isSolved {
-            let radius = pieceRadius(piece, pointScale: pointScale)
-            let wheelRadius = max(radius + 34, 52)
-            let handleSize: CGFloat = 32
+            let radius = pieceRadius(piece, pointScale: pointScale, renderScale: pieceRenderScale(piece))
+            let wheelRadius = max(radius + 22, 42)
+            let handleSize: CGFloat = 26
             let diameter = (wheelRadius + handleSize) * 2
 
             RotationWheelView(angleDegrees: piece.angleDegrees,
@@ -246,40 +244,19 @@ struct GameBoardView: View {
         }
     }
 
-    private func pieceRadius(_ piece: PlayPiece, pointScale: CGFloat) -> CGFloat {
+    private func pieceRenderScale(_ piece: PlayPiece) -> CGFloat {
+        // Tray pieces render smaller so the enlarged silhouette remains the visual focus.
+        piece.locked || piece.centroid.y <= model.trayTopY ? 1 : 0.58
+    }
+
+    private func pieceRadius(_ piece: PlayPiece, pointScale: CGFloat, renderScale: CGFloat) -> CGFloat {
         let baseRadius = TangramGame.baseUnitPolygon(piece.kind)
             .map { hypot($0.x, $0.y) }
             .max() ?? 2
-        return baseRadius * pointScale
-    }
-
-    private var controls: some View {
-        HStack(spacing: 20) {
-            Button("Rotate left", systemImage: "rotate.left") { rotate(-45) }
-            Button("Rotate right", systemImage: "rotate.right") { rotate(45) }
-            Button("Flip", systemImage: "trapezoid.and.line.vertical") { flip() }
-        }
-        .font(.title)
-        .buttonStyle(.bordered)
-        .disabled(model.selectedPiece == nil)
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(.bar)
+        return baseRadius * pointScale * renderScale
     }
 
     // MARK: Effects
-
-    private func rotate(_ delta: Double) {
-        let id = model.selectedID
-        let snapped = withOptionalAnimation(.bouncy) { model.rotateSelected(byDegrees: delta) }
-        if snapped, let id { pop(id) }
-    }
-
-    private func flip() {
-        let id = model.selectedID
-        let snapped = withOptionalAnimation(.bouncy) { model.flipSelected() }
-        if snapped, let id { pop(id) }
-    }
 
     private func placeHint() {
         let id = withOptionalAnimation(.bouncy) { model.placeHint() }

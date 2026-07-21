@@ -62,7 +62,7 @@ final class TangramGame {
 
         let box = puzzle.boundingBox
         let m = max(box.width, box.height)
-        let cx = box.midX, cy = box.midY
+        let cx = box.midX
 
         // Slots come straight from the solution.
         let builtSlots: [Slot] = puzzle.pieces.compactMap { piece in
@@ -76,24 +76,24 @@ final class TangramGame {
         self.slots = builtSlots
 
         // Tray home positions below the silhouette. Board space is screen-oriented (y-down),
-        // so "below" is a larger y. Rows of 3/3/1 keep the board narrow so the silhouette fills
-        // more of the screen.
-        let dx = m * 0.62
-        let dy = m * 0.78
-        let trayGap = m * 0.72
-        let pieceHalf = m * 0.55
-        let margin = m * 0.12
+        // so "below" is a larger y. Two compact rows keep the board's virtual bounds tight,
+        // making the target silhouette occupy most of the available screen width.
+        let dx = m * 0.32
+        let dy = m * 0.34
+        let trayGap = m * 0.18
+        let pieceHalf = m * 0.30
+        let horizontalMargin = m * 0.22
+        let verticalMargin = m * 0.10
         func rowY(_ r: Int) -> CGFloat { box.maxY + trayGap + CGFloat(r) * dy }
         var homes: [CGPoint] = []
-        for i in 0..<3 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1) * dx, y: rowY(0))) }
+        for i in 0..<4 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1.5) * dx, y: rowY(0))) }
         for i in 0..<3 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1) * dx, y: rowY(1))) }
-        homes.append(CGPoint(x: cx, y: rowY(2)))
 
-        self.trayTopY = box.maxY + margin
-        self.boardRect = CGRect(x: cx - (dx + pieceHalf + margin),
-                                y: box.minY - margin,
-                                width: 2 * (dx + pieceHalf + margin),
-                                height: (rowY(2) + pieceHalf + margin) - (box.minY - margin))
+        self.trayTopY = box.maxY + verticalMargin
+        self.boardRect = CGRect(x: box.minX - horizontalMargin,
+                                y: box.minY - verticalMargin,
+                                width: box.width + 2 * horizontalMargin,
+                                height: (rowY(1) + pieceHalf + verticalMargin) - (box.minY - verticalMargin))
 
         self.pieces = builtSlots.enumerated().map { index, slot in
             let home = homes[index]
