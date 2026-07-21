@@ -66,7 +66,7 @@ struct GameBoardView: View {
     @State private var model: TangramGame
     @State private var popID: Int?
     @State private var hintedSlotID: Int?
-    @State private var showsPieceLines = true // Controls only the silhouette's internal guides.
+    @State private var showsPieceLines = false // Starts with a clean silhouette; menu can reveal guides.
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ProgressStore.self) private var progress
