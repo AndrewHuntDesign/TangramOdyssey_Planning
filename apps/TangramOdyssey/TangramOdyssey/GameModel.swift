@@ -62,7 +62,7 @@ final class TangramGame {
 
         let box = puzzle.boundingBox
         let m = max(box.width, box.height)
-        let cx = box.midX, cy = box.midY
+        let cx = box.midX
 
         // Slots come straight from the solution.
         let builtSlots: [Slot] = puzzle.pieces.compactMap { piece in
@@ -75,19 +75,25 @@ final class TangramGame {
         }
         self.slots = builtSlots
 
-        // Tray home positions: two rows (4 + 3) below the silhouette.
-        let dx = m * 0.82
-        let row1Y = box.minY - m * 0.60
-        let row2Y = box.minY - m * 1.38
+        // Tray home positions below the silhouette. Board space is screen-oriented (y-down),
+        // so "below" is a larger y. Two compact rows keep the board's virtual bounds tight,
+        // making the target silhouette occupy most of the available screen width.
+        let dx = m * 0.32
+        let dy = m * 0.34
+        let trayGap = m * 0.18
+        let pieceHalf = m * 0.30
+        let horizontalMargin = m * 0.22
+        let verticalMargin = m * 0.10
+        func rowY(_ r: Int) -> CGFloat { box.maxY + trayGap + CGFloat(r) * dy }
         var homes: [CGPoint] = []
-        for i in 0..<4 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1.5) * dx, y: row1Y)) }
-        for i in 0..<3 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1.0) * dx, y: row2Y)) }
+        for i in 0..<4 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1.5) * dx, y: rowY(0))) }
+        for i in 0..<3 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1) * dx, y: rowY(1))) }
 
-        self.trayTopY = box.minY - m * 0.22
-        self.boardRect = CGRect(x: cx - (1.5 * dx + m * 0.55),
-                                y: row2Y - m * 0.55,
-                                width: (3 * dx + m * 1.1),
-                                height: (box.maxY + m * 0.12) - (row2Y - m * 0.55))
+        self.trayTopY = box.maxY + verticalMargin
+        self.boardRect = CGRect(x: box.minX - horizontalMargin,
+                                y: box.minY - verticalMargin,
+                                width: box.width + 2 * horizontalMargin,
+                                height: (rowY(1) + pieceHalf + verticalMargin) - (box.minY - verticalMargin))
 
         self.pieces = builtSlots.enumerated().map { index, slot in
             let home = homes[index]
@@ -156,7 +162,7 @@ final class TangramGame {
         }
         let start = dragStart[id]!
         pieces[index].centroid = CGPoint(x: start.x + screenTranslation.width / scale,
-                                         y: start.y - screenTranslation.height / scale) // board y is up
+                                         y: start.y + screenTranslation.height / scale) // board y is screen-down
     }
 
     /// Returns `true` if the piece snapped into a slot (so the view can play a lock effect).
@@ -164,8 +170,8 @@ final class TangramGame {
     func endDrag(_ id: Int) -> Bool {
         dragStart[id] = nil
         if trySnap(id) { return true }
-        // Dropped over the tray region → send it home.
-        if let index = pieces.firstIndex(where: { $0.id == id }), pieces[index].centroid.y < trayTopY {
+        // Dropped over the tray region (below the silhouette, i.e. larger y) → send it home.
+        if let index = pieces.firstIndex(where: { $0.id == id }), pieces[index].centroid.y > trayTopY {
             sendHome(index)
         }
         return false
@@ -176,6 +182,15 @@ final class TangramGame {
         guard let id = selectedID, let index = pieces.firstIndex(where: { $0.id == id }), !pieces[index].locked else { return false }
         pieces[index].angleDegrees += delta
         return trySnap(id)
+    }
+
+    /// Sets a piece's absolute angle; wheel drags defer snapping until the gesture ends.
+    @discardableResult
+    func rotatePiece(_ id: Int, toDegrees angle: Double, shouldSnap: Bool = true) -> Bool {
+        guard let index = pieces.firstIndex(where: { $0.id == id }), !pieces[index].locked else { return false }
+        selectedID = id
+        pieces[index].angleDegrees = angle
+        return shouldSnap ? trySnap(id) : false
     }
 
     @discardableResult
