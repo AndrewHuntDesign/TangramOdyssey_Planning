@@ -32,11 +32,24 @@ struct PlayPiece: Identifiable {
     var reflected: Bool
     var locked: Bool = false
     let home: CGPoint    // resting spot in the tray
+    let homeAngleDegrees: Double
+    let homeReflected: Bool
 }
 
 @MainActor
 @Observable
 final class TangramGame {
+    private struct TrayHome {
+        let centroid: CGPoint
+        let angleDegrees: Double
+        let reflected: Bool
+    }
+
+    private struct TrayLayout {
+        let homes: [Int: TrayHome]
+        let bounds: CGRect
+    }
+
     let puzzle: Puzzle
     private(set) var slots: [Slot]
     var pieces: [PlayPiece]
@@ -75,32 +88,109 @@ final class TangramGame {
         }
         self.slots = builtSlots
 
-        // Tray home positions below the silhouette. Two compact rows keep the tray short while
-        // leaving enough inset for the smaller tray-rendered pieces to stay fully inside.
-        let dx = m * 0.27
-        let dy = m * 0.28
-        let trayGap = m * 0.30
-        let pieceHalf = m * 0.20
-        let horizontalMargin = m * 0.22
+        // Tray home poses use the flat, horizontal composition from "Symmetric 079",
+        // scaled as one assembled strip so the pieces sit edge-to-edge like the reference tray.
+        let trayRenderScale = Self.trayPieceRenderScale
+        let trayLayout = Self.symmetricTrayLayout(scale: trayRenderScale * CGFloat(puzzle.scale))
+        let trayGap = m * 0.14
+        let trayHeight = trayLayout.bounds.height
+        let pieceHalf = trayHeight / 2
+        let trayWidth = trayLayout.bounds.width
+        let horizontalMargin = max(m * 0.22, (trayWidth - box.width) / 2 + m * 0.05)
         let verticalMargin = m * 0.05
-        let trayTopInset = m * 0.10
+        let trayTopInset = m * 0.05
         let trayBottomPadding = m * 0.02
-        func rowY(_ r: Int) -> CGFloat { box.maxY + trayGap + CGFloat(r) * dy }
-        var homes: [CGPoint] = []
-        for i in 0..<4 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1.5) * dx, y: rowY(0))) }
-        for i in 0..<3 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1) * dx, y: rowY(1))) }
+        let trayCenterY = box.maxY + trayGap + trayHeight / 2
+        let homes = trayLayout.homes.mapValues { home in
+            TrayHome(centroid: CGPoint(x: cx + home.centroid.x, y: trayCenterY + home.centroid.y),
+                     angleDegrees: home.angleDegrees,
+                     reflected: home.reflected)
+        }
 
         self.trayTopY = box.maxY + trayTopInset
         self.boardRect = CGRect(x: box.minX - horizontalMargin,
                                 y: box.minY - verticalMargin,
                                 width: box.width + 2 * horizontalMargin,
-                                height: (rowY(1) + pieceHalf + trayBottomPadding) - (box.minY - verticalMargin))
+                                height: (trayCenterY + pieceHalf + trayBottomPadding) - (box.minY - verticalMargin))
 
         self.pieces = builtSlots.enumerated().map { index, slot in
-            let home = homes[index]
-            return PlayPiece(id: index, kind: slot.kind, centroid: home,
-                             angleDegrees: 0, reflected: false, home: home)
+            let home = homes[slot.id] ?? TrayHome(centroid: CGPoint(x: cx, y: trayCenterY),
+                                                  angleDegrees: 0,
+                                                  reflected: false)
+            return PlayPiece(id: index, kind: slot.kind, centroid: home.centroid,
+                             angleDegrees: home.angleDegrees, reflected: home.reflected,
+                             home: home.centroid, homeAngleDegrees: home.angleDegrees,
+                             homeReflected: home.reflected)
         }
+    }
+
+    static let trayPieceRenderScale: CGFloat = 0.42
+
+    private static func symmetricTrayLayout(scale: CGFloat) -> TrayLayout {
+        let template: [(id: Int, centroid: CGPoint, rotation: Int, reflected: Bool)] = [
+            (1, CGPoint(x: 98.8, y: 288.81), 9, false),
+            (2, CGPoint(x: 499.49, y: 288.81), 9, false),
+            (3, CGPoint(x: 428.78, y: 288.81), 9, false),
+            (4, CGPoint(x: 263.79, y: 288.81), 9, false),
+            (5, CGPoint(x: 310.93, y: 312.38), 15, false),
+            (6, CGPoint(x: 369.85, y: 300.59), 21, false),
+            (7, CGPoint(x: 193.08, y: 300.59), 3, true)
+        ]
+
+        let unit = TangramGeometry.pointsPerUnit
+        let polygons = template.compactMap { piece -> [CGPoint]? in
+            guard let kind = PieceKind(pieceID: piece.id) else { return nil }
+            return placedPolygon(base: baseUnitPolygon(kind),
+                                 centroid: piece.centroid,
+                                 angleDegrees: Double(piece.rotation) * 15 + baselineOffset(pieceID: piece.id),
+                                 reflected: piece.reflected,
+                                 unit: unit)
+        }
+        let sourceBounds = boundingBox(for: polygons.flatMap { $0 })
+        let sourceCenter = CGPoint(x: sourceBounds.midX, y: sourceBounds.midY)
+
+        var homes: [Int: TrayHome] = [:]
+        for piece in template {
+            let angle = Double(piece.rotation) * 15 + baselineOffset(pieceID: piece.id)
+            homes[piece.id] = TrayHome(centroid: CGPoint(x: (piece.centroid.x - sourceCenter.x) * scale,
+                                                         y: (piece.centroid.y - sourceCenter.y) * scale),
+                                       angleDegrees: angle,
+                                       reflected: piece.reflected)
+        }
+
+        return TrayLayout(homes: homes,
+                          bounds: CGRect(x: -sourceBounds.width * scale / 2,
+                                         y: -sourceBounds.height * scale / 2,
+                                         width: sourceBounds.width * scale,
+                                         height: sourceBounds.height * scale))
+    }
+
+    private static func placedPolygon(base: [CGPoint],
+                                      centroid: CGPoint,
+                                      angleDegrees: Double,
+                                      reflected: Bool,
+                                      unit: CGFloat) -> [CGPoint] {
+        let theta = angleDegrees * .pi / 180
+        let cosT = CoreGraphics.cos(theta), sinT = CoreGraphics.sin(theta)
+        return base.map { v in
+            let x = reflected ? -v.x : v.x
+            let y = v.y
+            let rx = x * cosT - y * sinT
+            let ry = x * sinT + y * cosT
+            return CGPoint(x: centroid.x + rx * unit, y: centroid.y + ry * unit)
+        }
+    }
+
+    private static func boundingBox(for points: [CGPoint]) -> CGRect {
+        guard let first = points.first else { return .zero }
+        var minX = first.x, minY = first.y, maxX = first.x, maxY = first.y
+        for point in points {
+            minX = min(minX, point.x)
+            minY = min(minY, point.y)
+            maxX = max(maxX, point.x)
+            maxY = max(maxY, point.y)
+        }
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
     }
 
     // MARK: Geometry
@@ -209,16 +299,16 @@ final class TangramGame {
         selectedID = nil
         for index in pieces.indices {
             pieces[index].centroid = pieces[index].home
-            pieces[index].angleDegrees = 0
-            pieces[index].reflected = false
+            pieces[index].angleDegrees = pieces[index].homeAngleDegrees
+            pieces[index].reflected = pieces[index].homeReflected
             pieces[index].locked = false
         }
     }
 
     private func sendHome(_ index: Int) {
         pieces[index].centroid = pieces[index].home
-        pieces[index].angleDegrees = 0
-        pieces[index].reflected = false
+        pieces[index].angleDegrees = pieces[index].homeAngleDegrees
+        pieces[index].reflected = pieces[index].homeReflected
         if selectedID == pieces[index].id { selectedID = nil }
     }
 
@@ -285,9 +375,10 @@ final class TangramGame {
         return nil
     }
 
-    /// Debug/verification helper: place every piece at a matching slot pose and lock it.
-    func placeAllAtSolution() {
+    /// Places every piece at a matching slot pose and locks it.
+    func placeAllAtSolution(markSolved: Bool = true) {
         occupied.removeAll()
+        selectedID = nil
         for index in pieces.indices { pieces[index].locked = false }
         for (slotIndex, slot) in slots.enumerated() {
             if let index = pieces.firstIndex(where: { !$0.locked && $0.kind == slot.kind }) {
@@ -298,5 +389,6 @@ final class TangramGame {
                 occupied.insert(slotIndex)
             }
         }
+        isSolved = markSolved && pieces.allSatisfy(\.locked)
     }
 }
