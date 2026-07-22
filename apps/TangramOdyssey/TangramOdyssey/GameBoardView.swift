@@ -216,6 +216,14 @@ struct GameBoardView: View {
                         if snapped { pop(piece.id) }
                     }
             )
+            .simultaneousGesture(
+                TapGesture(count: 2)
+                    .onEnded {
+                        // Double-tap flips only the active piece; first tap still selects/moves.
+                        guard model.selectedID == piece.id else { return }
+                        flipSelectedPiece(piece.id)
+                    }
+            )
             .accessibilityLabel("\(piece.kind.accessibilityName) piece")
             .accessibilityValue(piece.locked ? "Placed" : "Unplaced")
             .accessibilityAddTraits(.isButton)
@@ -268,6 +276,11 @@ struct GameBoardView: View {
     private func showSpot() {
         guard let id = model.unfilledSlotIDs.first else { return }
         withOptionalAnimation(.easeInOut) { hintedSlotID = id }
+    }
+
+    private func flipSelectedPiece(_ id: Int) {
+        let snapped = withOptionalAnimation(.bouncy) { model.flipSelected() }
+        if snapped { pop(id) }
     }
 
     private func pop(_ id: Int) {
@@ -340,8 +353,15 @@ private struct RotationWheelView: View {
             .contentShape(RotationWheelHitShape(innerRadius: wheelRadius - handleSize,
                                                 outerRadius: wheelRadius + handleSize),
                           eoFill: true)
+            .highPriorityGesture(
+                SpatialTapGesture()
+                    .onEnded { value in
+                        // A click on the wheel ring should rotate immediately without a drag.
+                        onRotate(angle(from: value.location, center: center), true)
+                    }
+            )
             .gesture(
-                DragGesture(minimumDistance: 0)
+                DragGesture(minimumDistance: 1)
                     .onChanged { value in
                         onRotate(angle(from: value.location, center: center), false)
                     }
