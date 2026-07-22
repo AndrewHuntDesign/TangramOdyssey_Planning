@@ -75,31 +75,55 @@ final class TangramGame {
         }
         self.slots = builtSlots
 
-        // Tray home positions below the silhouette. Two compact rows keep the tray short while
-        // leaving enough inset for the smaller tray-rendered pieces to stay fully inside.
-        let dx = m * 0.27
-        let dy = m * 0.28
-        let trayGap = m * 0.30
-        let pieceHalf = m * 0.20
+        // Tray home positions use the flat, horizontal composition from "Symmetric 079",
+        // scaled into a compact bottom tray while leaving enough inset for reduced-size pieces.
+        let trayGap = m * 0.17
+        let trayWidth = m * 1.02
+        let trayHeight = m * 0.18
+        let pieceHalf = m * 0.18
         let horizontalMargin = m * 0.22
         let verticalMargin = m * 0.05
-        let trayTopInset = m * 0.10
+        let trayTopInset = m * 0.08
         let trayBottomPadding = m * 0.02
-        func rowY(_ r: Int) -> CGFloat { box.maxY + trayGap + CGFloat(r) * dy }
-        var homes: [CGPoint] = []
-        for i in 0..<4 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1.5) * dx, y: rowY(0))) }
-        for i in 0..<3 { homes.append(CGPoint(x: cx + (CGFloat(i) - 1) * dx, y: rowY(1))) }
+        let trayCenterY = box.maxY + trayGap + trayHeight / 2
+        let homes = Self.symmetricTrayHomes(centerX: cx, centerY: trayCenterY, width: trayWidth, height: trayHeight)
 
         self.trayTopY = box.maxY + trayTopInset
         self.boardRect = CGRect(x: box.minX - horizontalMargin,
                                 y: box.minY - verticalMargin,
                                 width: box.width + 2 * horizontalMargin,
-                                height: (rowY(1) + pieceHalf + trayBottomPadding) - (box.minY - verticalMargin))
+                                height: (trayCenterY + pieceHalf + trayBottomPadding) - (box.minY - verticalMargin))
 
         self.pieces = builtSlots.enumerated().map { index, slot in
             let home = homes[index]
             return PlayPiece(id: index, kind: slot.kind, centroid: home,
                              angleDegrees: 0, reflected: false, home: home)
+        }
+    }
+
+    private static func symmetricTrayHomes(centerX: CGFloat, centerY: CGFloat, width: CGFloat, height: CGFloat) -> [CGPoint] {
+        let template: [CGPoint] = [
+            CGPoint(x: 98.8, y: 288.81),
+            CGPoint(x: 499.49, y: 288.81),
+            CGPoint(x: 428.78, y: 288.81),
+            CGPoint(x: 263.79, y: 288.81),
+            CGPoint(x: 310.93, y: 312.38),
+            CGPoint(x: 369.85, y: 300.59),
+            CGPoint(x: 193.08, y: 300.59)
+        ]
+
+        let minX = template.map(\.x).min() ?? 0
+        let maxX = template.map(\.x).max() ?? 1
+        let minY = template.map(\.y).min() ?? 0
+        let maxY = template.map(\.y).max() ?? 1
+        let midX = (minX + maxX) / 2
+        let midY = (minY + maxY) / 2
+        let sourceWidth = max(maxX - minX, 1)
+        let sourceHeight = max(maxY - minY, 1)
+
+        return template.map { point in
+            CGPoint(x: centerX + ((point.x - midX) / sourceWidth) * width,
+                    y: centerY + ((point.y - midY) / sourceHeight) * height)
         }
     }
 
@@ -285,9 +309,10 @@ final class TangramGame {
         return nil
     }
 
-    /// Debug/verification helper: place every piece at a matching slot pose and lock it.
-    func placeAllAtSolution() {
+    /// Places every piece at a matching slot pose and locks it.
+    func placeAllAtSolution(markSolved: Bool = true) {
         occupied.removeAll()
+        selectedID = nil
         for index in pieces.indices { pieces[index].locked = false }
         for (slotIndex, slot) in slots.enumerated() {
             if let index = pieces.firstIndex(where: { !$0.locked && $0.kind == slot.kind }) {
@@ -298,5 +323,6 @@ final class TangramGame {
                 occupied.insert(slotIndex)
             }
         }
+        isSolved = markSolved && pieces.allSatisfy(\.locked)
     }
 }

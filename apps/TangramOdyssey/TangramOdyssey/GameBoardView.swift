@@ -15,7 +15,7 @@ private struct BoardMap {
 
     var scale: CGFloat { min(size.width / board.width, size.height / board.height) }
     private var originX: CGFloat { (size.width - board.width * scale) / 2 }
-    private var originY: CGFloat { (size.height - board.height * scale) / 2 }
+    private var originY: CGFloat { size.height - board.height * scale }
 
     func toScreen(_ p: CGPoint) -> CGPoint {
         // Board space is screen-oriented (y-down); no vertical flip.
@@ -67,6 +67,7 @@ struct GameBoardView: View {
     @State private var popID: Int?
     @State private var hintedSlotID: Int?
     @State private var showsPieceLines = false // Starts with a clean silhouette; menu can reveal guides.
+    @State private var restoredSolvedProgress = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ProgressStore.self) private var progress
@@ -99,10 +100,10 @@ struct GameBoardView: View {
                 }
                 .accessibilityLabel("Hint")
                 .accessibilityIdentifier("hintMenu")
-                .disabled(model.isSolved)
+                .disabled(model.isSolved || restoredSolvedProgress)
 
                 Button("Reset", systemImage: "arrow.counterclockwise") {
-                    withOptionalAnimation(.snappy) { model.reset() }
+                    resetPuzzle()
                 }
             }
         }
@@ -127,7 +128,7 @@ struct GameBoardView: View {
             .onTapGesture { model.selectedID = nil }
         }
         .background(.background)
-        .onAppear { if debugSolved { model.placeAllAtSolution() } }
+        .onAppear { restoreSolvedProgressIfNeeded() }
         .onChange(of: model.isSolved) { _, solved in
             if solved { progress.markSolved(model.puzzle.id) }
         }
@@ -256,7 +257,7 @@ struct GameBoardView: View {
 
     private func pieceRenderScale(_ piece: PlayPiece) -> CGFloat {
         // Tray pieces render smaller so the enlarged silhouette remains the visual focus.
-        piece.locked || piece.centroid.y <= model.trayTopY ? 1 : 0.44
+        piece.locked || piece.centroid.y <= model.trayTopY ? 1 : 0.34
     }
 
     private func pieceRadius(_ piece: PlayPiece, pointScale: CGFloat, renderScale: CGFloat) -> CGFloat {
@@ -281,6 +282,20 @@ struct GameBoardView: View {
     private func flipSelectedPiece(_ id: Int) {
         let snapped = withOptionalAnimation(.bouncy) { model.flipSelected() }
         if snapped { pop(id) }
+    }
+
+    private func resetPuzzle() {
+        restoredSolvedProgress = false
+        withOptionalAnimation(.snappy) { model.reset() }
+    }
+
+    private func restoreSolvedProgressIfNeeded() {
+        if debugSolved {
+            model.placeAllAtSolution()
+        } else if progress.isSolved(model.puzzle.id), !restoredSolvedProgress, !model.isSolved {
+            model.placeAllAtSolution(markSolved: false)
+            restoredSolvedProgress = true
+        }
     }
 
     private func pop(_ id: Int) {
