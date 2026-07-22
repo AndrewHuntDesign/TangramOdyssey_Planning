@@ -124,7 +124,7 @@ final class TangramGame {
         }
     }
 
-    static let trayPieceRenderScale: CGFloat = 0.34
+    static let trayPieceRenderScale: CGFloat = 0.42
 
     private static func symmetricTrayLayout(scale: CGFloat) -> TrayLayout {
         let template: [(id: Int, centroid: CGPoint, rotation: Int, reflected: Bool)] = [
