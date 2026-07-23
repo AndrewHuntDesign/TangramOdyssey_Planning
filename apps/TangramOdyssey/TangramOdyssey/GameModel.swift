@@ -92,13 +92,15 @@ final class TangramGame {
         // scaled as one assembled strip so the pieces sit edge-to-edge like the reference tray.
         let trayRenderScale = Self.trayPieceRenderScale
         let trayLayout = Self.symmetricTrayLayout(scale: trayRenderScale * CGFloat(puzzle.scale))
-        let trayGap = m * 0.14
+        let trayGap = m * 0.08
         let trayHeight = trayLayout.bounds.height
         let pieceHalf = trayHeight / 2
         let trayWidth = trayLayout.bounds.width
-        let horizontalMargin = max(m * 0.22, (trayWidth - box.width) / 2 + m * 0.05)
-        let verticalMargin = m * 0.05
-        let trayTopInset = m * 0.05
+        // Full-scale tray drives board width; keep only a thin margin so the silhouette fills
+        // as much of the remaining width as possible.
+        let horizontalMargin = max(m * 0.04, (trayWidth - box.width) / 2 + m * 0.02)
+        let verticalMargin = m * 0.03
+        let trayTopInset = m * 0.04
         let trayBottomPadding = m * 0.02
         let trayCenterY = box.maxY + trayGap + trayHeight / 2
         let homes = trayLayout.homes.mapValues { home in
@@ -124,7 +126,7 @@ final class TangramGame {
         }
     }
 
-    static let trayPieceRenderScale: CGFloat = 0.42
+    static let trayPieceRenderScale: CGFloat = 1.0
 
     private static func symmetricTrayLayout(scale: CGFloat) -> TrayLayout {
         let template: [(id: Int, centroid: CGPoint, rotation: Int, reflected: Bool)] = [
