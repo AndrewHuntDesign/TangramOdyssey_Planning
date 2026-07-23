@@ -15,7 +15,7 @@ private struct BoardMap {
 
     var scale: CGFloat { min(size.width / board.width, size.height / board.height) }
     private var originX: CGFloat { (size.width - board.width * scale) / 2 }
-    private var originY: CGFloat { (size.height - board.height * scale) / 2 }
+    private var originY: CGFloat { size.height - board.height * scale }
 
     func toScreen(_ p: CGPoint) -> CGPoint {
         // Board space is screen-oriented (y-down); no vertical flip.
@@ -144,7 +144,7 @@ struct GameBoardView: View {
 
     private func trayBackground(map: BoardMap) -> some View {
         let board = model.boardRect
-        let topLeft = map.toScreen(CGPoint(x: board.minX, y: model.trayTopY))
+        let topLeft = map.toScreen(CGPoint(x: board.minX, y: model.trayRegionTopY))
         let bottomRight = map.toScreen(CGPoint(x: board.maxX, y: board.maxY))
         let rect = CGRect(x: topLeft.x, y: topLeft.y,
                           width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y)

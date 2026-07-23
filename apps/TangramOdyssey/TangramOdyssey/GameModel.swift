@@ -60,6 +60,9 @@ final class TangramGame {
     let boardRect: CGRect
     /// Pieces dropped below this board-space y snap back to the tray.
     let trayTopY: CGFloat
+    /// Top of the tray pieces' resting strip (board space) — used to frame the tray background so
+    /// it hugs the pieces rather than the whole gap below the silhouette.
+    let trayRegionTopY: CGFloat
 
     private let unit: CGFloat
     private var occupied: Set<Int> = []          // indices into `slots` already filled
@@ -92,7 +95,10 @@ final class TangramGame {
         // scaled as one assembled strip so the pieces sit edge-to-edge like the reference tray.
         let trayRenderScale = Self.trayPieceRenderScale
         let trayLayout = Self.symmetricTrayLayout(scale: trayRenderScale * CGFloat(puzzle.scale))
-        let trayGap = m * 0.08
+        // A wide gap lifts the silhouette toward the vertical center while the tray stays pinned
+        // to the bottom of the bottom-anchored board. Kept within width-constrained limits so the
+        // full-width tray doesn't shrink.
+        let trayGap = m * 1.2
         let trayHeight = trayLayout.bounds.height
         let pieceHalf = trayHeight / 2
         let trayWidth = trayLayout.bounds.width
@@ -110,6 +116,7 @@ final class TangramGame {
         }
 
         self.trayTopY = box.maxY + trayTopInset
+        self.trayRegionTopY = trayCenterY - pieceHalf - trayBottomPadding
         self.boardRect = CGRect(x: box.minX - horizontalMargin,
                                 y: box.minY - verticalMargin,
                                 width: box.width + 2 * horizontalMargin,
