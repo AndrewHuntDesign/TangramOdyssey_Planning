@@ -31,6 +31,15 @@ generic "Ensure no pieces overlap." for **all** puzzles, so hints are gameplay a
   **congruent-polygon comparison** (centroid + vertex sets), which makes same-kind pieces
   interchangeable and handles piece symmetry without tracking orientation. Same-kind pieces share
   one base polygon; per-id baseline differences (ids 2 and 5) fold into slot angles.
+  **Layout**: the silhouette sits above a **full-scale, single-row tray** (`trayPieceRenderScale
+  = 1.0`, "Symmetric 079" strip — a loose tan matches its placed size). Everything lives in one
+  board coordinate space rendered through a single uniform transform (the view bottom-anchors it,
+  pinning the tray to the screen bottom), so drag/snap need no special cases. `relayout(for:)` is
+  called on view-size change and recomputes the silhouette→tray gap so the silhouette is centered
+  in the space above the tray on any device (`height/scale = 2·gap + figureHeight + trayHeight`);
+  it re-homes unplaced pieces (locked pieces stay put). The full-width tray is the width
+  constraint on portrait, so the silhouette is width-limited; wrapping the tray to two rows is the
+  lever if it needs to grow. `trayRegionTopY` frames the tray background to hug the pieces.
 - `ProgressStore.swift` — `@Observable @MainActor` store of solved puzzle ids, persisted to
   `UserDefaults` and mirrored to iCloud so progress follows the player across iPhone / iPad /
   tvOS. Both stores sit behind a small `KeyValueStore` protocol (conformed by `UserDefaults`,
