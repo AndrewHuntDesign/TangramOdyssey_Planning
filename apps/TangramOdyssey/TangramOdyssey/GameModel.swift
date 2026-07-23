@@ -31,9 +31,9 @@ struct PlayPiece: Identifiable {
     var angleDegrees: Double
     var reflected: Bool
     var locked: Bool = false
-    let home: CGPoint    // resting spot in the tray
-    let homeAngleDegrees: Double
-    let homeReflected: Bool
+    var home: CGPoint    // resting spot in the tray (recomputed when the view size changes)
+    var homeAngleDegrees: Double
+    var homeReflected: Bool
 }
 
 @MainActor
@@ -56,13 +56,21 @@ final class TangramGame {
     var selectedID: Int?
     private(set) var isSolved = false
 
-    /// Board coordinate space (dataset y-up) framing the silhouette and tray.
-    let boardRect: CGRect
+    /// Board coordinate space (dataset y-up) framing the silhouette and tray. Recomputed from the
+    /// view size (see `relayout(for:)`) so the silhouette centers vertically above the pinned tray.
+    private(set) var boardRect: CGRect
     /// Pieces dropped below this board-space y snap back to the tray.
-    let trayTopY: CGFloat
+    private(set) var trayTopY: CGFloat
     /// Top of the tray pieces' resting strip (board space) — used to frame the tray background so
     /// it hugs the pieces rather than the whole gap below the silhouette.
-    let trayRegionTopY: CGFloat
+    private(set) var trayRegionTopY: CGFloat
+
+    // Inputs retained so the vertical layout can be recomputed for the actual view size.
+    private let figureBox: CGRect          // silhouette bounding box (board space)
+    private let figureCenterX: CGFloat
+    private let metric: CGFloat            // max(figure width, height) — the layout's base unit
+    private let trayHomeOffsets: [Int: TrayHome]  // per-piece offsets relative to the tray center
+    private let trayBounds: CGRect         // assembled tray strip bounds (for width/height)
 
     private let unit: CGFloat
     private var occupied: Set<Int> = []          // indices into `slots` already filled
@@ -95,41 +103,82 @@ final class TangramGame {
         // scaled as one assembled strip so the pieces sit edge-to-edge like the reference tray.
         let trayRenderScale = Self.trayPieceRenderScale
         let trayLayout = Self.symmetricTrayLayout(scale: trayRenderScale * CGFloat(puzzle.scale))
-        // A wide gap lifts the silhouette toward the vertical center while the tray stays pinned
-        // to the bottom of the bottom-anchored board. Kept within width-constrained limits so the
-        // full-width tray doesn't shrink.
-        let trayGap = m * 1.2
-        let trayHeight = trayLayout.bounds.height
-        let pieceHalf = trayHeight / 2
-        let trayWidth = trayLayout.bounds.width
+
+        self.figureBox = box
+        self.figureCenterX = cx
+        self.metric = m
+        self.trayHomeOffsets = trayLayout.homes
+        self.trayBounds = trayLayout.bounds
+
+        // Placeholders; the real layout is set by applyLayout below and again by relayout(for:)
+        // once the view's size is known.
+        self.boardRect = .zero
+        self.trayTopY = 0
+        self.trayRegionTopY = 0
+        self.pieces = builtSlots.enumerated().map { index, slot in
+            PlayPiece(id: index, kind: slot.kind, centroid: .zero, angleDegrees: 0, reflected: false,
+                      home: .zero, homeAngleDegrees: 0, homeReflected: false)
+        }
+
+        // Seed with a reasonable gap; relayout(for:) recomputes it for the actual view size.
+        applyLayout(trayGap: m * 0.5)
+    }
+
+    // MARK: Layout
+
+    /// Recomputes the vertical layout for a given view size so the silhouette is centered in the
+    /// space above a tray pinned to the bottom. Keeps a single uniform board→screen transform
+    /// (the view bottom-anchors the board), so drag and snapping are unaffected.
+    func relayout(for size: CGSize) {
+        guard size.width > 0, size.height > 0 else { return }
+        let horizontalMargin = Self.horizontalMargin(metric: metric, trayWidth: trayBounds.width, boxWidth: figureBox.width)
+        let boardWidth = figureBox.width + 2 * horizontalMargin
+        let scale = size.width / boardWidth
+        guard scale > 0 else { return }
+        // Gap that makes the space above the figure equal the gap between the figure and the tray
+        // (derivation: size.height/scale = 2·gap + figureHeight + trayHeight).
+        let idealGap = (size.height / scale - figureBox.height - trayBounds.height) / 2
+        applyLayout(trayGap: max(metric * 0.1, idealGap))
+    }
+
+    private static func horizontalMargin(metric m: CGFloat, trayWidth: CGFloat, boxWidth: CGFloat) -> CGFloat {
         // Full-scale tray drives board width; keep only a thin margin so the silhouette fills
         // as much of the remaining width as possible.
-        let horizontalMargin = max(m * 0.04, (trayWidth - box.width) / 2 + m * 0.02)
+        max(m * 0.04, (trayWidth - boxWidth) / 2 + m * 0.02)
+    }
+
+    private func applyLayout(trayGap: CGFloat) {
+        let m = metric
+        let box = figureBox
+        let cx = figureCenterX
+        let trayHeight = trayBounds.height
+        let pieceHalf = trayHeight / 2
+        let horizontalMargin = Self.horizontalMargin(metric: m, trayWidth: trayBounds.width, boxWidth: box.width)
         let verticalMargin = m * 0.03
         let trayTopInset = m * 0.04
         let trayBottomPadding = m * 0.02
         let trayCenterY = box.maxY + trayGap + trayHeight / 2
-        let homes = trayLayout.homes.mapValues { home in
-            TrayHome(centroid: CGPoint(x: cx + home.centroid.x, y: trayCenterY + home.centroid.y),
-                     angleDegrees: home.angleDegrees,
-                     reflected: home.reflected)
-        }
 
-        self.trayTopY = box.maxY + trayTopInset
-        self.trayRegionTopY = trayCenterY - pieceHalf - trayBottomPadding
-        self.boardRect = CGRect(x: box.minX - horizontalMargin,
-                                y: box.minY - verticalMargin,
-                                width: box.width + 2 * horizontalMargin,
-                                height: (trayCenterY + pieceHalf + trayBottomPadding) - (box.minY - verticalMargin))
+        trayTopY = box.maxY + trayTopInset
+        trayRegionTopY = trayCenterY - pieceHalf - trayBottomPadding
+        boardRect = CGRect(x: box.minX - horizontalMargin,
+                           y: box.minY - verticalMargin,
+                           width: box.width + 2 * horizontalMargin,
+                           height: (trayCenterY + pieceHalf + trayBottomPadding) - (box.minY - verticalMargin))
 
-        self.pieces = builtSlots.enumerated().map { index, slot in
-            let home = homes[slot.id] ?? TrayHome(centroid: CGPoint(x: cx, y: trayCenterY),
-                                                  angleDegrees: 0,
-                                                  reflected: false)
-            return PlayPiece(id: index, kind: slot.kind, centroid: home.centroid,
-                             angleDegrees: home.angleDegrees, reflected: home.reflected,
-                             home: home.centroid, homeAngleDegrees: home.angleDegrees,
-                             homeReflected: home.reflected)
+        for index in pieces.indices {
+            let slotID = slots[index].id
+            let offset = trayHomeOffsets[slotID]
+            let home = CGPoint(x: cx + (offset?.centroid.x ?? 0), y: trayCenterY + (offset?.centroid.y ?? 0))
+            pieces[index].home = home
+            pieces[index].homeAngleDegrees = offset?.angleDegrees ?? 0
+            pieces[index].homeReflected = offset?.reflected ?? false
+            // Keep unplaced pieces resting at their (possibly moved) home; leave locked pieces put.
+            if !pieces[index].locked {
+                pieces[index].centroid = home
+                pieces[index].angleDegrees = pieces[index].homeAngleDegrees
+                pieces[index].reflected = pieces[index].homeReflected
+            }
         }
     }
 

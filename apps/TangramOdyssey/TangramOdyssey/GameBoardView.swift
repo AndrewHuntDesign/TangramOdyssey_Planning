@@ -126,6 +126,9 @@ struct GameBoardView: View {
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
             .onTapGesture { model.selectedID = nil }
+            .onChange(of: geo.size, initial: true) { _, size in
+                model.relayout(for: size)
+            }
         }
         .background(.background)
         .onAppear { restoreSolvedProgressIfNeeded() }
