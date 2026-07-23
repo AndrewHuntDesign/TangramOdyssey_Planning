@@ -44,11 +44,15 @@ generic "Ensure no pieces overlap." for **all** puzzles, so hints are gameplay a
   `UserDefaults` and mirrored to iCloud so progress follows the player across iPhone / iPad /
   tvOS. Both stores sit behind a small `KeyValueStore` protocol (conformed by `UserDefaults`,
   `NSUbiquitousKeyValueStore`, and an in-memory test fake); the local `defaults` and the optional
-  `cloud` slot are both injectable. Launch seeds from local then unions the cloud; every solve
-  write-throughs to both; external cloud changes are observed via an async `NotificationCenter`
-  sequence and folded in with `mergeExternalChanges()`. Merges are **union** (solving is
-  monotonic — never un-solve), so `clear()` is effectively local-only unless a tombstone is added.
-  Created in `TangramOdysseyApp` (`cloud: NSUbiquitousKeyValueStore.default`) and passed via
+  `cloud` slot are both injectable. Launch seeds from local then reconciles with the cloud; every
+  solve write-throughs to both; external cloud changes are observed (`NSUbiquitousKeyValueStore`'s
+  `didChangeExternallyNotification`, ignoring quota-violation reasons) and folded in via
+  `mergeExternalChanges()`. Reconciliation **unions within a clear-epoch** (solving is monotonic —
+  never un-solve) but tracks a `clearedAt` tombstone: `clear()` bumps it, and the **more recent
+  clear wins a merge outright**, so a reset isn't silently repopulated by a stale/in-flight cloud
+  push. The persisted blob is a `StoredProgress {solved, clearedAt}`; a legacy bare-`Set<Int>`
+  blob still decodes (clearedAt 0) so existing players keep progress. `now:` is injectable for
+  deterministic tests. Created in `TangramOdysseyApp` (`cloud: NSUbiquitousKeyValueStore.default`) and passed via
   `.environment`; the game calls `markSolved(puzzle.id)` on win and the browser reads it.
   **iCloud sync requires the iCloud → Key-value storage capability** on each target's
   entitlements (a manual Signing & Capabilities step; not yet enabled) — the code compiles and
@@ -64,7 +68,8 @@ generic "Ensure no pieces overlap." for **all** puzzles, so hints are gameplay a
 - `TangramOdysseyTests/` — Swift Testing coverage: `PuzzleDataTests` (decode + invariants),
   `TangramGeometryTests` (piece areas, area-preservation, the reference square), and
   `ProgressStoreTests` (solved tracking + persistence, using an isolated `UserDefaults` suite,
-  plus iCloud seed/mirror/merge via an in-memory `KeyValueStore` fake).
+  plus iCloud seed/merge, the change-notification observer, and the clear tombstone via an
+  in-memory `KeyValueStore` fake that shares state across `ProgressStore` instances).
 - `TangramOdysseyUITests/GameplayUITests.swift` — XCUITest flow: browse category → open puzzle →
   solve by tapping "Place a piece" ×7 → assert the win overlay. Relies on the accessibility
   identifiers `category-<name>`, `puzzle-<id>`, and `hintMenu`. (Dragging tans by coordinate is
