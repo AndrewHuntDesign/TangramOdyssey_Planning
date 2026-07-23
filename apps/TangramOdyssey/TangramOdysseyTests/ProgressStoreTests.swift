@@ -55,4 +55,54 @@ struct ProgressStoreTests {
         #expect(store.solvedCount == 0)
         #expect(!ProgressStore(defaults: defaults).isSolved(3)) // cleared value also persisted
     }
+
+    // MARK: - Cross-device sync
+
+    /// The JSON key ProgressStore uses; mirrored here since it's private to the store.
+    private let storageKey = "solvedPuzzleIDs"
+
+    private func cloudBlob(_ ids: Set<Int>) -> Data {
+        try! JSONEncoder().encode(ids)
+    }
+
+    @Test func seedsFromCloudAtLaunch() {
+        let cloud = InMemoryKeyValueStore()
+        cloud.setDataValue(cloudBlob([5]), forKey: storageKey)
+        let store = ProgressStore(defaults: makeDefaults(), cloud: cloud)
+        #expect(store.isSolved(5))
+    }
+
+    @Test func mirrorsSolvesToCloud() {
+        let cloud = InMemoryKeyValueStore()
+        let store = ProgressStore(defaults: makeDefaults(), cloud: cloud)
+        store.markSolved(9)
+        let mirrored = try! JSONDecoder().decode(Set<Int>.self, from: cloud.dataValue(forKey: storageKey)!)
+        #expect(mirrored.contains(9))
+    }
+
+    @Test func mergesExternalCloudChanges() {
+        let cloud = InMemoryKeyValueStore()
+        let store = ProgressStore(defaults: makeDefaults(), cloud: cloud)
+        store.markSolved(1)
+
+        // Simulate another device having solved 2 and 3, then a change notification.
+        cloud.setDataValue(cloudBlob([2, 3]), forKey: storageKey)
+        store.mergeExternalChanges()
+
+        #expect(store.isSolved(1))
+        #expect(store.isSolved(2))
+        #expect(store.isSolved(3))
+        #expect(store.solvedCount == 3)
+    }
+}
+
+/// A UserDefaults-free stand-in for the cloud slot: holds data in memory and never
+/// posts external-change notifications (tests drive `mergeExternalChanges()` directly).
+@MainActor
+final class InMemoryKeyValueStore: KeyValueStore {
+    private var storage: [String: Data] = [:]
+    func dataValue(forKey key: String) -> Data? { storage[key] }
+    func setDataValue(_ data: Data?, forKey key: String) { storage[key] = data }
+    @discardableResult func synchronizeStore() -> Bool { true }
+    var externalChangeNotification: Notification.Name? { nil }
 }

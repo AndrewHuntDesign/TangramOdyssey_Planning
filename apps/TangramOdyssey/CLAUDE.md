@@ -32,8 +32,19 @@ generic "Ensure no pieces overlap." for **all** puzzles, so hints are gameplay a
   interchangeable and handles piece symmetry without tracking orientation. Same-kind pieces share
   one base polygon; per-id baseline differences (ids 2 and 5) fold into slot angles.
 - `ProgressStore.swift` — `@Observable @MainActor` store of solved puzzle ids, persisted to
-  `UserDefaults` (injectable for tests). Created in `TangramOdysseyApp` and passed via
+  `UserDefaults` and mirrored to iCloud so progress follows the player across iPhone / iPad /
+  tvOS. Both stores sit behind a small `KeyValueStore` protocol (conformed by `UserDefaults`,
+  `NSUbiquitousKeyValueStore`, and an in-memory test fake); the local `defaults` and the optional
+  `cloud` slot are both injectable. Launch seeds from local then unions the cloud; every solve
+  write-throughs to both; external cloud changes are observed via an async `NotificationCenter`
+  sequence and folded in with `mergeExternalChanges()`. Merges are **union** (solving is
+  monotonic — never un-solve), so `clear()` is effectively local-only unless a tombstone is added.
+  Created in `TangramOdysseyApp` (`cloud: NSUbiquitousKeyValueStore.default`) and passed via
   `.environment`; the game calls `markSolved(puzzle.id)` on win and the browser reads it.
+  **iCloud sync requires the iCloud → Key-value storage capability** on each target's
+  entitlements (a manual Signing & Capabilities step; not yet enabled) — the code compiles and
+  runs local-only without it. tvOS is not configured yet; when added, use the same KVS identifier
+  so the container is shared.
 - `GameBoardView.swift` — the interactive board. Pieces are **per-piece positioned views**
   (`PieceShape` in a centered frame + `.position`/`.rotationEffect(-angle)`/`.scaleEffect`) so
   SwiftUI animates glide, rotation, flip, and lock-pop; the silhouette is a `Canvas` layer; hit
@@ -43,7 +54,8 @@ generic "Ensure no pieces overlap." for **all** puzzles, so hints are gameplay a
   `../TangramData.json`; the parent copy remains the source of truth, so keep them in sync).
 - `TangramOdysseyTests/` — Swift Testing coverage: `PuzzleDataTests` (decode + invariants),
   `TangramGeometryTests` (piece areas, area-preservation, the reference square), and
-  `ProgressStoreTests` (solved tracking + persistence, using an isolated `UserDefaults` suite).
+  `ProgressStoreTests` (solved tracking + persistence, using an isolated `UserDefaults` suite,
+  plus iCloud seed/mirror/merge via an in-memory `KeyValueStore` fake).
 - `TangramOdysseyUITests/GameplayUITests.swift` — XCUITest flow: browse category → open puzzle →
   solve by tapping "Place a piece" ×7 → assert the win overlay. Relies on the accessibility
   identifiers `category-<name>`, `puzzle-<id>`, and `hintMenu`. (Dragging tans by coordinate is
