@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct TangramOdysseyApp: App {
-    @State private var progress = ProgressStore()
+    @State private var progress = ProgressStore(cloud: NSUbiquitousKeyValueStore.default)
 
     var body: some Scene {
         WindowGroup {
