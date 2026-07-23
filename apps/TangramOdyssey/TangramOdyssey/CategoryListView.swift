@@ -24,7 +24,6 @@ struct CategoryListView: View {
         let puzzles = catalog.puzzles(in: category)
         let total = puzzles.count
         let solved = puzzles.reduce(0) { $0 + (progress.isSolved($1.id) ? 1 : 0) }
-        let fraction = total == 0 ? 0 : Double(solved) / Double(total)
 
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -33,12 +32,8 @@ struct CategoryListView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            if solved == total {
+            if total > 0, solved == total {
                 Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
-            } else {
-                ProgressView(value: fraction)
-                    .progressViewStyle(.circular)
-                    .controlSize(.small)
             }
         }
         .padding(.vertical, 4)
